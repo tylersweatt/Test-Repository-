@@ -32,9 +32,10 @@ export interface CraftSpace {
 
 export class CraftClient {
   private client: AxiosInstance;
-  private baseUrl = 'https://api.craft.do/v1';
+  private baseUrl: string;
 
-  constructor(config: CraftConfig) {
+  constructor(config: CraftConfig, customBaseUrl?: string) {
+    this.baseUrl = customBaseUrl || 'https://connect.craft.do/links/Hn7UdVqh6ie/api/v1';
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: {
