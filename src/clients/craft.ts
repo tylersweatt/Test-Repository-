@@ -38,7 +38,7 @@ export class CraftClient {
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: {
-        'Authorization': `Bearer ${config.apiToken}`,
+        'X-API-Key': config.apiToken,
         'Content-Type': 'application/json',
       },
     });

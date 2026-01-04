@@ -8,8 +8,14 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "sync": "tsx src/cli.ts sync",
-    "query": "tsx src/cli.ts query"
+    "cli": "tsx src/cli.ts",
+    "sync-events": "tsx src/cli.ts sync-events",
+    "sync-people": "tsx src/cli.ts sync-people",
+    "analyze": "tsx src/cli.ts analyze",
+    "query": "tsx src/cli.ts query",
+    "update-doc": "tsx src/cli.ts update-doc",
+    "list-spaces": "tsx src/cli.ts list-spaces",
+    "service-plans": "tsx src/cli.ts service-plans"
   },
   "keywords": [
     "planning-center",
