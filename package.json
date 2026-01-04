@@ -1,0 +1,33 @@
+{
+  "name": "planning-center-claude-craft-integration",
+  "version": "1.0.0",
+  "description": "Integration tool for Planning Center, Claude AI, and Craft docs",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "sync": "tsx src/cli.ts sync",
+    "query": "tsx src/cli.ts query"
+  },
+  "keywords": [
+    "planning-center",
+    "claude",
+    "craft",
+    "integration"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
