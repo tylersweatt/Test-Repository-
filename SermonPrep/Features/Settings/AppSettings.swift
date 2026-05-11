@@ -11,9 +11,10 @@ final class AppSettings: ObservableObject {
 
     @AppStorage("defaultTranslation")      var defaultTranslation: String  = "KJV"
     @AppStorage("preacherName")            var preacherName: String         = ""
+    @AppStorage("esvApiKey")               var esvApiKey: String            = ""
     @AppStorage("useBibleAPI")             var useBibleAPI: Bool            = false
     @AppStorage("bibleAPIKey")             var bibleAPIKey: String          = ""
-    @AppStorage("apiBibleID")             var apiBibleID: String           = ""  // API.Bible translation ID
+    @AppStorage("apiBibleID")              var apiBibleID: String           = ""  // API.Bible translation ID
     @AppStorage("preferredColorScheme")    var preferredColorScheme: String = "system"
     @AppStorage("teleprompterSpeed")       var teleprompterSpeed: Double    = 50.0
     @AppStorage("exportFont")              var exportFont: String           = "Georgia"
@@ -24,6 +25,8 @@ final class AppSettings: ObservableObject {
     private init() {}
 
     // MARK: - Computed
+
+    var hasESVKey: Bool { !esvApiKey.trimmingCharacters(in: .whitespaces).isEmpty }
 
     /// Returns a SwiftUI ColorScheme override, or nil to follow system preference.
     var colorScheme: ColorScheme? {

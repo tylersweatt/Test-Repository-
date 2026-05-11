@@ -69,7 +69,41 @@ class ScriptureDatabase {
         return results
     }
 
-    // API.Bible integration
+    // MARK: - ESV API (api.esv.org)
+
+    /// Fetches a passage from Crossway's ESV API using a human-readable reference string.
+    /// - Parameter reference: e.g. "John 3:16" or "Romans 8:1-11"
+    /// - Parameter apiKey: personal API key from api.esv.org
+    func fetchESVPassage(reference: String, apiKey: String) async throws -> String {
+        let query = reference.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? reference
+        let urlString = "https://api.esv.org/v3/passage/text/"
+            + "?q=\(query)"
+            + "&include-verse-numbers=false"
+            + "&include-headings=false"
+            + "&include-footnotes=false"
+            + "&include-passage-references=false"
+            + "&include-short-copyright=false"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.setValue("Token \(apiKey)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 403 {
+            throw ESVError.invalidAPIKey
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let passages = json["passages"] as? [String],
+              let text = passages.first else {
+            throw URLError(.cannotParseResponse)
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    enum ESVError: LocalizedError {
+        case invalidAPIKey
+        var errorDescription: String? { "Invalid ESV API key. Check your key in Settings." }
+    }
+
+    // MARK: - API.Bible integration
     func fetchVerse(bookID: String, chapter: Int, verseStart: Int, verseEnd: Int?, translation: String, apiKey: String) async throws -> String {
         let bibleID = apiBibleID(for: translation)
         let verseRange: String

@@ -14,6 +14,10 @@ struct ScripturePickerSheet: View {
     @State private var verses: [ScriptureVerse] = []
     @State private var isSearchMode = false
     @State private var selectedTranslation: String = "KJV"
+    @State private var esvPreviewText: String = ""
+    @State private var esvFetchTask: Task<Void, Never>? = nil
+    @State private var isFetchingESV = false
+    @State private var esvFetchError: String? = nil
 
     var chapterCount: Int { selectedBook.chapterCount }
     var verseCount: Int { verses.count }
@@ -46,12 +50,16 @@ struct ScripturePickerSheet: View {
                     searchResults = ScriptureDatabase.shared.searchVerses(query: q)
                 }
             }
-            .onChange(of: selectedBook) { _, _ in loadVerses() }
-            .onChange(of: chapter) { _, _ in loadVerses() }
+            .onChange(of: selectedBook) { _, _ in loadVerses(); fetchESVPreviewIfNeeded() }
+            .onChange(of: chapter) { _, _ in loadVerses(); fetchESVPreviewIfNeeded() }
+            .onChange(of: verseStart) { _, _ in fetchESVPreviewIfNeeded() }
+            .onChange(of: selectedTranslation) { _, _ in fetchESVPreviewIfNeeded() }
             .onAppear {
                 loadVerses()
                 selectedTranslation = settings.defaultTranslation
+                fetchESVPreviewIfNeeded()
             }
+            .onDisappear { esvFetchTask?.cancel() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -93,21 +101,8 @@ struct ScripturePickerSheet: View {
             .frame(height: 200)
             .padding(.horizontal)
 
-            // Preview selected verse
-            if let verse = verses.first(where: { $0.verse == verseStart }) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("\(selectedBook.rawValue) \(chapter):\(verseStart)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text("\"\(verse.text)\"")
-                        .font(.body.italic())
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.quaternary)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .padding()
-            }
+            // Verse preview
+            versePreviewBox
 
             Spacer()
         }
@@ -134,12 +129,87 @@ struct ScripturePickerSheet: View {
         }
     }
 
+    @ViewBuilder
+    var versePreviewBox: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("\(selectedBook.rawValue) \(chapter):\(verseStart)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if selectedTranslation == "ESV" {
+                if !settings.hasESVKey {
+                    Label("Add your ESV API key in Settings to preview ESV text.", systemImage: "key")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if isFetchingESV {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Fetching ESV…").font(.caption).foregroundStyle(.secondary)
+                    }
+                } else if let err = esvFetchError {
+                    Label(err, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                } else if !esvPreviewText.isEmpty {
+                    Text("\"\(esvPreviewText)\"")
+                        .font(.body.italic())
+                }
+            } else if let verse = verses.first(where: { $0.verse == verseStart }) {
+                Text("\"\(verse.text)\"")
+                    .font(.body.italic())
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding()
+        .animation(.easeInOut(duration: 0.2), value: isFetchingESV)
+    }
+
+    private func fetchESVPreviewIfNeeded() {
+        guard selectedTranslation == "ESV", settings.hasESVKey else {
+            esvPreviewText = ""
+            esvFetchError = nil
+            return
+        }
+        esvFetchTask?.cancel()
+        esvFetchTask = Task {
+            // Small debounce so rapid picker scrolling doesn't fire many requests
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            let reference = "\(selectedBook.rawValue) \(chapter):\(verseStart)"
+            await MainActor.run { isFetchingESV = true; esvFetchError = nil }
+            do {
+                let text = try await ScriptureDatabase.shared.fetchESVPassage(
+                    reference: reference,
+                    apiKey: settings.esvApiKey
+                )
+                await MainActor.run {
+                    esvPreviewText = text
+                    isFetchingESV = false
+                }
+            } catch {
+                await MainActor.run {
+                    esvFetchError = error.localizedDescription
+                    isFetchingESV = false
+                }
+            }
+        }
+    }
+
     private func loadVerses() {
         verses = ScriptureDatabase.shared.verses(book: selectedBook.rawValue, chapter: chapter)
     }
 
     private func insertScripture() {
-        let verseText = verses.first(where: { $0.verse == verseStart })?.text ?? ""
+        // Use the fetched ESV text when available; fall back to offline KJV
+        let verseText: String
+        if selectedTranslation == "ESV", !esvPreviewText.isEmpty {
+            verseText = esvPreviewText
+        } else {
+            verseText = verses.first(where: { $0.verse == verseStart })?.text ?? ""
+        }
         var meta = ScriptureMetadata.empty(translation: selectedTranslation)
         meta.book = selectedBook.rawValue
         meta.chapter = chapter

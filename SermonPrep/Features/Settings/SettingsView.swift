@@ -16,16 +16,41 @@ struct SettingsView: View {
                         Text(t).tag(t)
                     }
                 }
+            }
 
-                Toggle("Use Bible API (online lookup)", isOn: $settings.useBibleAPI)
-
-                if settings.useBibleAPI {
-                    TextField("API.Bible API Key", text: $settings.bibleAPIKey)
+            Section {
+                HStack {
+                    TextField("ESV API Key", text: $settings.esvApiKey)
                         .textContentType(.password)
-                    Text("Get a free API key at api.bible")
+                        #if os(iOS)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        #endif
+                    if settings.hasESVKey {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+                }
+                Link("Get a free key at api.esv.org", destination: URL(string: "https://api.esv.org/account/create-application/")!)
+                    .font(.caption)
+            } header: {
+                Text("ESV Bible")
+            } footer: {
+                Text("Your key is stored on-device and used only to fetch ESV verse text in the scripture picker. Crossway provides free keys for personal use.")
+                    .font(.caption)
+            }
+
+            Section {
+                Toggle("Use API.Bible (other translations)", isOn: $settings.useBibleAPI)
+                if settings.useBibleAPI {
+                    TextField("API.Bible Key", text: $settings.bibleAPIKey)
+                        .textContentType(.password)
+                    Text("Get a free key at api.bible")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            } header: {
+                Text("Other Translations (NIV, CSB, NKJV)")
             }
 
             Section("Appearance") {
