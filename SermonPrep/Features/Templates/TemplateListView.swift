@@ -1,12 +1,12 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - TemplateListView
-
 struct TemplateListView: View {
-    @Environment(\.modelContext) private var modelContext
     @Query private var templates: [SermonTemplate]
+    @Environment(\.modelContext) private var modelContext
+    @Environment(AppState.self) private var appState
     @State private var isShowingNewTemplate = false
+    @State private var selectedTemplate: SermonTemplate? = nil
 
     var systemTemplates: [SermonTemplate] { templates.filter { $0.isSystemTemplate } }
     var userTemplates: [SermonTemplate] { templates.filter { !$0.isSystemTemplate } }
@@ -14,28 +14,19 @@ struct TemplateListView: View {
     var body: some View {
         List {
             if !systemTemplates.isEmpty {
-                Section("Built-In Templates") {
+                Section("Built-in Templates") {
                     ForEach(systemTemplates) { template in
-                        TemplateRow(template: template)
+                        templateRow(template)
                     }
                 }
             }
-
-            Section("My Templates") {
-                if userTemplates.isEmpty {
-                    Text("No custom templates yet.")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                } else {
+            if !userTemplates.isEmpty {
+                Section("My Templates") {
                     ForEach(userTemplates) { template in
-                        TemplateRow(template: template)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    modelContext.delete(template)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
+                        templateRow(template)
+                    }
+                    .onDelete { offsets in
+                        for i in offsets { modelContext.delete(userTemplates[i]) }
                     }
                 }
             }
@@ -43,26 +34,26 @@ struct TemplateListView: View {
         .navigationTitle("Templates")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    isShowingNewTemplate = true
-                } label: {
+                Button { isShowingNewTemplate = true } label: {
                     Label("New Template", systemImage: "plus")
                 }
             }
         }
+        .sheet(item: $selectedTemplate) { template in
+            NewSermonFromTemplateSheet(template: template)
+        }
         .sheet(isPresented: $isShowingNewTemplate) {
             NewTemplateSheet()
         }
+        .overlay {
+            if templates.isEmpty {
+                ContentUnavailableView("No Templates", systemImage: "square.grid.2x2")
+            }
+        }
     }
-}
 
-// MARK: - TemplateRow
-
-struct TemplateRow: View {
-    let template: SermonTemplate
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+    func templateRow(_ template: SermonTemplate) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(template.title)
                     .font(.headline)
@@ -80,24 +71,88 @@ struct TemplateRow: View {
                 Text(template.templateDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
-            let blockTypes = template.blockTypes
-            if !blockTypes.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
-                        ForEach(blockTypes) { type in
-                            Image(systemName: type.systemImage)
-                                .font(.caption2)
-                                .foregroundStyle(type.accentColor)
-                                .padding(4)
-                                .background(type.accentColor.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(template.blockTypes.prefix(8), id: \.self) { type in
+                        Image(systemName: type.systemImage)
+                            .font(.caption2)
+                            .foregroundStyle(type.accentColor)
+                            .padding(4)
+                            .background(type.accentColor.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    if template.blockTypes.count > 8 {
+                        Text("+\(template.blockTypes.count - 8)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { selectedTemplate = template }
+    }
+}
+
+// MARK: - NewSermonFromTemplateSheet
+
+struct NewSermonFromTemplateSheet: View {
+    let template: SermonTemplate
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
+
+    @State private var title = ""
+    @State private var passageReference = ""
+    @State private var selectedBook: BibleBook = .john
+
+    var isValid: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Based on: \(template.title)") {
+                    TextField("Sermon Title", text: $title)
+                    TextField("Passage Reference", text: $passageReference)
+                    Picker("Book of Bible", selection: $selectedBook) {
+                        ForEach(BibleBook.allCases) { book in
+                            Text(book.rawValue).tag(book)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("New Sermon")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") { createFromTemplate() }
+                        .disabled(!isValid)
+                }
+            }
+        }
+    }
+
+    private func createFromTemplate() {
+        let sermon = Sermon(
+            title: title.trimmingCharacters(in: .whitespaces),
+            passageReference: passageReference,
+            bookOfBible: selectedBook
+        )
+        modelContext.insert(sermon)
+        for (i, blockType) in template.blockTypes.enumerated() {
+            let block = SermonBlock(blockType: blockType, sortOrder: i, sermon: sermon)
+            modelContext.insert(block)
+            sermon.blocks.append(block)
+        }
+        appState.selectedSermonID = sermon.id
+        try? modelContext.save()
+        dismiss()
     }
 }
 
@@ -109,9 +164,13 @@ struct NewTemplateSheet: View {
 
     @State private var title = ""
     @State private var description = ""
-    @State private var selectedBlockTypes: [BlockType] = [.hook, .scripture, .outline, .explanation, .application, .conclusion]
+    @State private var selectedBlockTypes: [BlockType] = [
+        .hook, .scripture, .outline, .explanation, .application, .conclusion
+    ]
 
-    var isValid: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty && !selectedBlockTypes.isEmpty }
+    var isValid: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty && !selectedBlockTypes.isEmpty
+    }
 
     var body: some View {
         NavigationStack {
@@ -135,9 +194,7 @@ struct NewTemplateSheet: View {
                     Menu {
                         ForEach(BlockType.allCases) { type in
                             Button {
-                                if !selectedBlockTypes.contains(type) {
-                                    selectedBlockTypes.append(type)
-                                }
+                                selectedBlockTypes.append(type)
                             } label: {
                                 Label(type.displayName, systemImage: type.systemImage)
                             }

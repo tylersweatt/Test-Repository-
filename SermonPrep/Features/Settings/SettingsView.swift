@@ -1,7 +1,5 @@
 import SwiftUI
 
-// MARK: - SettingsView
-
 struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.dismiss) private var dismiss
@@ -14,15 +12,19 @@ struct SettingsView: View {
 
             Section("Scripture") {
                 Picker("Default Translation", selection: $settings.defaultTranslation) {
-                    ForEach(["KJV", "NIV", "ESV", "NKJV", "NLT", "NASB", "CSB", "MSG"], id: \.self) { t in
+                    ForEach(["KJV", "ESV", "NIV", "CSB", "NKJV", "NLT", "NASB"], id: \.self) { t in
                         Text(t).tag(t)
                     }
                 }
-                Toggle("Use Bible API for Lookups", isOn: $settings.useBibleAPI)
+
+                Toggle("Use Bible API (online lookup)", isOn: $settings.useBibleAPI)
+
                 if settings.useBibleAPI {
-                    TextField("API Key", text: $settings.bibleAPIKey)
+                    TextField("API.Bible API Key", text: $settings.bibleAPIKey)
                         .textContentType(.password)
-                    TextField("Bible ID (API.Bible)", text: $settings.apiBibleID)
+                    Text("Get a free API key at api.bible")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -39,12 +41,10 @@ struct SettingsView: View {
                 HStack {
                     Text("Teleprompter Speed")
                     Spacer()
-                    Slider(value: $settings.teleprompterSpeed, in: 10...100, step: 5)
-                        .frame(maxWidth: 200)
-                    Text("\(Int(settings.teleprompterSpeed))")
+                    Text("\(Int(settings.teleprompterSpeed)) wpm")
                         .foregroundStyle(.secondary)
-                        .frame(width: 36)
                 }
+                Slider(value: $settings.teleprompterSpeed, in: 10...200, step: 5)
             }
 
             Section("Export") {
@@ -52,7 +52,7 @@ struct SettingsView: View {
                     Text("Georgia").tag("Georgia")
                     Text("Helvetica").tag("Helvetica")
                     Text("Times New Roman").tag("Times New Roman")
-                    Text("System").tag("System")
+                    Text("Palatino").tag("Palatino")
                 }
             }
 
@@ -62,6 +62,12 @@ struct SettingsView: View {
                     Spacer()
                     Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0")
                         .foregroundStyle(.secondary)
+                }
+                HStack {
+                    Text("iCloud Sync")
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
                 }
             }
         }
