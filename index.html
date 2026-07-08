@@ -429,7 +429,7 @@ const ENEMIES = {
       { name: 'SAINT\'S TOE', pow: 26 },
       { name: 'MIRACLE CLAIM', pow: 34 },
     ],
-    intro: 'brandishes a suspicious bone!',
+    intro: 'brandishes the FOURTH skull of John the Baptist you\'ve seen this week!',
     effMsg: 'The relic is nowhere in Scripture — its power fades!',
   },
   friar: {
@@ -440,7 +440,7 @@ const ENEMIES = {
       { name: 'SCHOLASTIC QUIBBLE', pow: 32 },
       { name: 'ROSARY RATTLE', pow: 24 },
     ],
-    intro: 'challenges your doctrine!',
+    intro: 'blocks your path. Old habits die hard!',
     effMsg: 'Bold conviction cuts through the Latin fog!',
   },
   tetzel: {
@@ -453,7 +453,7 @@ const ENEMIES = {
     ],
     intro: 'cries: "When the coin in the coffer rings, the soul from purgatory springs!"',
     effMsg: 'Forgiveness is a gift of grace, not a purchase!',
-    lesson: 'Johann Tetzel was the Dominican friar whose aggressive indulgence sales near Wittenberg provoked Luther\'s 95 Theses. His famous jingle promised souls sprang from purgatory when coins rang in the coffer.',
+    lesson: 'Johann Tetzel was the Dominican friar whose aggressive indulgence sales near Wittenberg provoked Luther\'s 95 Theses. The famous coin-coffer jingle is ATTRIBUTED to him — he probably never said those exact words, but his preaching sold the same idea, and Luther attacked it by name.',
   },
   eck: {
     name: 'JOHANN ECK', art: ART_ECK, pal: PAL_ECK,
@@ -505,7 +505,8 @@ const FACTS = [
   'Zwingli died in battle at Kappel in 1531, serving as a chaplain when Catholic cantons attacked Zurich.',
   'At the Marburg Colloquy (1529) Luther and Zwingli agreed on 14 of 15 points — but split forever over the Lord\'s Supper.',
   'Calvin\'s Geneva welcomed thousands of religious refugees, who carried Reformed ideas home to France, Scotland, the Netherlands and England.',
-  'The Peace of Augsburg (1555) settled "cuius regio, eius religio": each prince chose his territory\'s religion — Lutheran or Catholic.',
+  'The Peace of Augsburg (1555) let each prince choose his territory\'s religion — Lutheran or Catholic — a rule later jurists summed up as "cuius regio, eius religio."',
+  'Relic collections got out of hand: Erasmus quipped that Europe held enough alleged wood of the True Cross to fill a ship. Frederick the Wise\'s own collection topped 19,000 pieces.',
   'Rome responded with the Counter-Reformation: the Council of Trent (1545-1563) reformed abuses but reaffirmed disputed doctrines.',
   'To Rome, the reformers were the heretics; to the reformers, Rome had strayed. Each side saw itself as defending the true faith.',
   'Luther composed hymns like "A Mighty Fortress Is Our God" so congregations could sing theology in their own tongue.',
@@ -603,7 +604,8 @@ const NPCS = [
     id: 'tetzel', tx: 6, ty: 6, art: PERSON, pal: personPal('#1a1a20', '#26262e'),
     boss: 'tetzel', level: 8,
     talk: () => game.flags.tetzel
-      ? ['TETZEL: My chest of coins... empty. Perhaps forgiveness was never for sale.']
+      ? ['TETZEL: My coffers ring hollow... my profits have gone to purgatory.',
+         'TETZEL: Perhaps forgiveness was never for sale.']
       : ['TETZEL: Step right up! For a few coins, your sins — POOF — forgiven!',
          'TETZEL: You look skeptical, friend. Shall we DEBATE it?'],
   },
@@ -629,7 +631,8 @@ const NPCS = [
       ? ['GUARD: The Emperor awaits. Enter the Diet... and may your conscience hold.']
       : ['GUARD: The DIET OF WORMS is in session. None may enter...',
          'GUARD: ...save those who have bested TETZEL, ECK, and CAJETAN in debate.',
-         `GUARD: You have won ${bossCount()} of 3 great debates.`],
+         `GUARD: You have won ${bossCount()} of 3 great debates.`,
+         'GUARD: And no — the Diet is a MEETING in the city of Worms. Nobody is eating worms. We are very tired of that joke.'],
   },
   {
     id: 'towns1', tx: 13, ty: 12, art: PERSON, pal: personPal('#6a4a2a', '#7a5a30'),
@@ -644,7 +647,20 @@ const NPCS = [
   {
     id: 'towns3', tx: 7, ty: 22, art: PERSON, pal: personPal('#3a3a4a', '#5a4a6a'),
     talk: () => ['PRINTER: My press runs day and night! Pamphlets, tracts, Bibles...',
-      'PRINTER: Ideas used to travel by donkey. Now they travel by the thousand pages.'],
+      'PRINTER: Ideas used to travel by donkey. Now they travel by the thousand pages.',
+      'PRINTER: Forgive my haste — I have some very PRESSING matters.'],
+  },
+  {
+    id: 'kid', tx: 31, ty: 27, art: PERSON, pal: personPal('#c87830', '#4a6aa0'),
+    talk: () => ['KID: The Emperor called a DIET OF WORMS! Bleeeh! Who would EAT worms?!',
+      'KID: Papa says it\'s just a big meeting in a city called Worms.',
+      'KID: I\'m still not going.'],
+  },
+  {
+    id: 'exmonk', tx: 10, ty: 17, art: PERSON, pal: personPal('#5a4028', '#6a4a2a'),
+    talk: () => ['MONK: I used to sell indulgences, you know.',
+      'MONK: I gave it up. I just couldn\'t forgive myself.',
+      'MONK: ...and apparently neither could anyone else, at any price.'],
   },
   {
     id: 'rival', tx: 19, ty: 21, art: PERSON, pal: null, // set after character select
@@ -934,15 +950,17 @@ function interact() {
   const t = tileAt(tx, ty);
   const signText = SIGNS[`${tx},${ty}`];
   if (t === 's' && signText) { say(signText); return; }
+  if (t === 'w') { say('You gaze into the water. Your reflection stares back, looking about 95% convinced.'); return; }
+  if (t === 'x') { say('You stop to smell the flowers. They neither toil, nor spin, nor sell indulgences.'); return; }
   if (t === '1') { // Castle Church
     if (!game.flags.theses) {
       say([
         'The great wooden door of the CASTLE CHURCH stands before you.',
         'You take hammer and nail... THUNK! THUNK! THUNK!',
-        'You have posted your theses against the sale of indulgences!',
+        'You have posted your theses against the sale of indulgences! NAILED IT.',
       ], () => {
         game.flags.theses = true;
-        showLesson('On October 31, 1517, Luther posted 95 Theses on the Castle Church door in Wittenberg — the usual notice board for academic debate. Within months, printers had spread them across Europe.');
+        showLesson('October 31, 1517: Luther published 95 Theses against indulgences. Tradition says he nailed them to the Castle Church door — the town notice board — but historians still debate whether he nailed them or only MAILED them to his archbishop. Either way, printers spread them across Europe within months.');
       });
     } else {
       say('Your theses hang on the door. A crowd gathers to read them daily.');
@@ -950,7 +968,9 @@ function interact() {
     return;
   }
   if (t === '2') { // Inn
-    say(['INNKEEPER: Weary of disputation, friend? Rest here.', '...You rest. Your conviction is fully restored!'], () => {
+    say(['INNKEEPER: Weary of disputation, friend? Rest here — our beds are 95% theses-free.',
+         'INNKEEPER: Complaints? We only accept them nailed to the door.',
+         '...You rest. Your conviction is fully restored!'], () => {
       player.hp = player.maxHp;
       audio.heal();
     });
