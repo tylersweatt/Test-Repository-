@@ -59,6 +59,9 @@ The game frames conflict as *debate*, not violence — and a villager will remin
 - Pure HTML5 canvas + vanilla JS, no dependencies, no build step
 - 240×160 logical resolution upscaled 3× (Game Boy proportions), string-art pixel sprites
 - CSS-only Game Boy console shell with pointer-event touch controls (works with touch, pen, and mouse)
-- WebAudio square-wave sound effects
+- WebAudio chiptune engine: square-wave sound effects plus looping background music —
+  the overworld theme is an 8-bit take on Luther's own hymn, *Ein feste Burg ist unser Gott*
+- Mute anytime with **M**, or tap the console's speaker grille / power LED on mobile
+  (if you hear nothing on iPhone, check the silent-mode switch — iOS mutes web audio with it)
 - Turn-based battle engine with type effectiveness (grace / scripture / conviction),
   XP, levels, and boss-gated progression
