@@ -18,11 +18,14 @@ Everything lives in a single dependency-free file: [`index.html`](index.html) �
 
 ### Controls
 
+The game is framed in a Game Boy–style console with a working touch D-pad, A/B buttons, and
+START/SELECT — so it plays like a handheld on phones and tablets. On a keyboard:
+
 | Key | Action |
 | --- | --- |
-| Arrow keys / WASD | Move |
-| Z / Enter / Space | Confirm, talk, interact |
-| X / Esc | Back, flee a debate |
+| Arrow keys / WASD | D-pad (move) |
+| Z / Enter / Space | A — confirm, talk, interact |
+| X / Esc | B — back, flee a debate |
 
 Rest at the **inn** (north side of town) to restore your conviction (HP). Losing a debate just
 sends you back to the inn to study — no progress is lost.
@@ -44,6 +47,7 @@ The game frames conflict as *debate*, not violence — and a villager will remin
 
 - Pure HTML5 canvas + vanilla JS, no dependencies, no build step
 - 240×160 logical resolution upscaled 3× (Game Boy proportions), string-art pixel sprites
+- CSS-only Game Boy console shell with pointer-event touch controls (works with touch, pen, and mouse)
 - WebAudio square-wave sound effects
 - Turn-based battle engine with type effectiveness (grace / scripture / conviction),
   XP, levels, and boss-gated progression
