@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Reformation Quest — an 8-bit Debate RPG</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --shell: #c6c2b6;
+    --shell-hi: #d6d2c6;
+    --shell-lo: #a19c8d;
+    --bezel: #4e4a5e;
+    --stripe-a: #8b2f4f;
+    --stripe-b: #3a3f77;
+    --dpad: #26262b;
+    --btn-ab: #93264a;
+    --label: #55506a;
+    --brand: #3d3a6b;
+  }
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; background: #16161e; color: #d8d8e0;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+  }
+  /* ---------------- Desktop: plain framed screen, no console chrome ---------------- */
+  h1 { font-size: 18px; letter-spacing: 3px; margin: 14px 0 4px; color: #f0d060; text-transform: uppercase; }
+  .sub { font-size: 12px; margin: 0 0 12px; color: #8888a0; }
+  .gb-grooves, .bezel-top, .power, .gb-brand, .pads, .startselect, .speaker { display: none; }
+  canvas {
+    image-rendering: pixelated; image-rendering: crisp-edges;
+    display: block; width: 720px; max-width: 96vw; height: auto; background: #000; outline: none;
+    border: 4px solid #3a3a4c; border-radius: 4px;
+  }
+  .kbd-hint { font-size: 11px; color: #8888a0; margin: 12px 0 24px; text-align: center; line-height: 1.7; padding: 0 12px; }
+  .kbd-hint b { color: #d8d8e0; }
+  /* ---------------- Phones & touch devices: full Game Boy shell ---------------- */
+  @media (pointer: coarse), (max-width: 640px) {
+    h1, .sub, .kbd-hint { display: none; }
+    .gb {
+      width: min(94vw, 430px);
+      margin: 12px 0 20px;
+      background: linear-gradient(160deg, var(--shell-hi), var(--shell) 40%, #b8b4a6);
+      border-radius: 14px 14px 64px 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 6px rgba(0,0,0,.18);
+      padding: 10px 16px 26px;
+      user-select: none; touch-action: manipulation; position: relative;
+    }
+    .gb-grooves { display: block; height: 10px; border-top: 2px solid var(--shell-lo); border-bottom: 2px solid var(--shell-lo); margin: 0 -16px 10px; opacity: .6; }
+    .bezel {
+      background: linear-gradient(180deg, #57536a, var(--bezel) 30%, #444054);
+      border-radius: 10px 10px 34px 10px;
+      padding: 8px 26px 20px;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
+    }
+    .bezel-top { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; }
+    .bezel-stripes { flex: 1; height: 6px; border-top: 2px solid var(--stripe-a); border-bottom: 2px solid var(--stripe-b); }
+    .bezel-text { font-size: 8px; letter-spacing: 1px; color: #c9c5da; white-space: nowrap; }
+    .screen-wrap { background: #101016; border-radius: 4px; padding: 6px; box-shadow: inset 0 0 8px rgba(0,0,0,.9); }
+    canvas { width: 100%; border: none; border-radius: 0; }
+    .power { display: flex; align-items: center; gap: 5px; margin-top: 8px; }
+    .led { width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff8a8a, #c01818); box-shadow: 0 0 6px #e03030; }
+    .power span { font-size: 8px; letter-spacing: 1px; color: #b8b4cc; }
+    .gb-brand {
+      display: block; margin: 12px 2px 6px; color: var(--brand);
+      font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: bold;
+      font-size: 17px; letter-spacing: .5px;
+    }
+    .gb-brand small { font-size: 10px; vertical-align: super; }
+    .pads { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+    .gb button {
+      border: none; padding: 0; font-family: inherit; color: transparent;
+      cursor: pointer; touch-action: none;
+    }
+    .dpad { width: 112px; height: 112px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); filter: drop-shadow(0 3px 2px rgba(0,0,0,.35)); }
+    .dpad button {
+      background: linear-gradient(180deg, #35353b, var(--dpad));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.15), inset 0 -2px 3px rgba(0,0,0,.5);
+    }
+    .dpad button:active { background: #1c1c20; transform: translateY(1px); }
+    .d-up    { grid-area: 1/2; border-radius: 6px 6px 0 0; }
+    .d-left  { grid-area: 2/1; border-radius: 6px 0 0 6px; }
+    .d-mid   { grid-area: 2/2; position: relative; }
+    .d-mid::after { content: ''; position: absolute; inset: 22%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #3d3d44, #1e1e22); }
+    .d-right { grid-area: 2/3; border-radius: 0 6px 6px 0; }
+    .d-down  { grid-area: 3/2; border-radius: 0 0 6px 6px; }
+    .ab { display: flex; gap: 18px; transform: rotate(-22deg); }
+    .ab .key { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .ab button {
+      width: 54px; height: 54px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 28%, #bd577a, var(--btn-ab) 60%, #6e1d3a);
+      box-shadow: 0 3px 4px rgba(0,0,0,.4), inset 0 2px 2px rgba(255,255,255,.25);
+      color: rgba(255,255,255,.55); font-size: 18px; font-weight: bold;
+    }
+    .ab button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+    .ab .key span { font-size: 10px; font-weight: bold; color: var(--label); letter-spacing: 1px; }
+    .startselect { display: flex; justify-content: center; gap: 26px; margin-top: 18px; }
+    .startselect .key { display: flex; flex-direction: column; align-items: center; gap: 5px; transform: rotate(-22deg); }
+    .startselect button {
+      width: 52px; height: 13px; border-radius: 8px;
+      background: linear-gradient(180deg, #8f8a7c, #6e6a5e);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 2px 2px rgba(0,0,0,.35);
+    }
+    .startselect button:active { transform: translateY(1px); }
+    .startselect span { font-size: 9px; font-weight: bold; color: var(--label); letter-spacing: 1px; }
+    .speaker { position: absolute; right: 24px; bottom: 30px; display: flex; gap: 8px; transform: rotate(-28deg); }
+    .speaker i { width: 6px; height: 38px; border-radius: 3px; background: var(--shell-lo); box-shadow: inset 0 1px 2px rgba(0,0,0,.4); }
+  }
+</style>
+</head>
+<body>
+<h1>Reformation Quest</h1>
+<p class="sub">A 16th-century 8-bit debate RPG</p>
+<div class="gb">
+  <div class="gb-grooves"></div>
+  <div class="bezel">
+    <div class="bezel-top">
+      <div class="bezel-stripes"></div>
+      <div class="bezel-text">DOT MATRIX WITH STEREO PSALMS</div>
+      <div class="bezel-stripes"></div>
+    </div>
+    <div class="screen-wrap">
+      <canvas id="game" width="720" height="480" tabindex="0"></canvas>
+    </div>
+    <div class="power"><div class="led"></div><span>CONVICTION</span></div>
+  </div>
+  <div class="gb-brand">Reformation Quest<small>™</small></div>
+  <div class="pads">
+    <div class="dpad">
+      <button class="d-up"    data-k="up"    aria-label="Up"></button>
+      <button class="d-left"  data-k="left"  aria-label="Left"></button>
+      <div class="d-mid"></div>
+      <button class="d-right" data-k="right" aria-label="Right"></button>
+      <button class="d-down"  data-k="down"  aria-label="Down"></button>
+    </div>
+    <div class="ab">
+      <div class="key"><button data-k="B" aria-label="B — back">B</button><span>B</span></div>
+      <div class="key"><button data-k="A" aria-label="A — confirm">A</button><span>A</span></div>
+    </div>
+  </div>
+  <div class="startselect">
+    <div class="key"><button data-k="B" aria-label="Select"></button><span>SELECT</span></div>
+    <div class="key"><button data-k="A" aria-label="Start"></button><span>START</span></div>
+  </div>
+  <div class="speaker"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+<p class="kbd-hint">
+  On a keyboard: <b>Arrows / WASD</b> move &nbsp;·&nbsp; <b>Z / Enter</b> = A &nbsp;·&nbsp; <b>X</b> = B<br>
+  Walk in tall grass to meet wandering debaters. Rest at the inn to recover.
+</p>
+<script>
+'use strict';
+
+// ------------------------------------------------------------------
+// Setup: 240x160 logical pixels, upscaled 3x (Game Boy proportions)
+// ------------------------------------------------------------------
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const VW = 240, VH = 160, SCALE = 3, TILE = 16;
+ctx.imageSmoothingEnabled = false;
+ctx.scale(SCALE, SCALE);
+cvs.focus();
+cvs.addEventListener('click', () => cvs.focus());
+
+// ------------------------------------------------------------------
+// Input
+// ------------------------------------------------------------------
+const held = {};
+let pressed = {};
+const KEYMAP = {
+  ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+  w: 'up', s: 'down', a: 'left', d: 'right',
+  W: 'up', S: 'down', A: 'left', D: 'right',
+  z: 'A', Z: 'A', Enter: 'A', ' ': 'A',
+  x: 'B', X: 'B', Backspace: 'B', Escape: 'B',
+};
+window.addEventListener('keydown', e => {
+  const k = KEYMAP[e.key];
+  if (!k) return;
+  e.preventDefault();
+  if (!held[k]) pressed[k] = true;
+  held[k] = true;
+  audio.unlock();
+});
+window.addEventListener('keyup', e => {
+  const k = KEYMAP[e.key];
+  if (k) held[k] = false;
+});
+
+// On-screen Game Boy buttons (touch, pen, and mouse via pointer events)
+document.querySelectorAll('button[data-k]').forEach(el => {
+  const k = el.dataset.k;
+  el.tabIndex = -1; // keep focus on the canvas for keyboard players
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    if (!held[k]) pressed[k] = true;
+    held[k] = true;
+    audio.unlock();
+  });
+  const release = () => { held[k] = false; };
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', release);
+  el.addEventListener('lostpointercapture', release);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+});
+
+// ------------------------------------------------------------------
+// Tiny chiptune-ish sound effects (square wave beeps)
+// ------------------------------------------------------------------
+const audio = {
+  ctx: null,
+  unlock() {
+    if (!this.ctx) {
+      try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  beep(freq, dur, vol = 0.04, type = 'square', when = 0) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + when;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t); o.stop(t + dur);
+  },
+  move()   { this.beep(440, 0.05); },
+  select() { this.beep(660, 0.07); this.beep(880, 0.07, 0.04, 'square', 0.07); },
+  back()   { this.beep(300, 0.07); },
+  hit()    { this.beep(180, 0.12, 0.05, 'sawtooth'); },
+  heal()   { this.beep(520, 0.08); this.beep(660, 0.08, 0.04, 'square', 0.08); this.beep(780, 0.1, 0.04, 'square', 0.16); },
+  faint()  { this.beep(300, 0.15, 0.05); this.beep(220, 0.15, 0.05, 'square', 0.15); this.beep(150, 0.25, 0.05, 'square', 0.3); },
+  win()    { [523, 659, 784, 1047].forEach((f, i) => this.beep(f, 0.12, 0.045, 'square', i * 0.11)); },
+  level()  { [660, 880, 1100].forEach((f, i) => this.beep(f, 0.09, 0.045, 'square', i * 0.08)); },
+  encounter() { this.beep(200, 0.1, 0.05); this.beep(260, 0.1, 0.05, 'square', 0.1); },
+};
+
+// ------------------------------------------------------------------
+// Pixel-art helper: draw string-art sprites
+// ------------------------------------------------------------------
+function drawArt(art, pal, x, y, s = 1, flip = false) {
+  for (let r = 0; r < art.length; r++) {
+    const row = art[r];
+    for (let c = 0; c < row.length; c++) {
+      const ch = row[c];
+      if (ch === '.') continue;
+      const col = pal[ch];
+      if (!col) continue;
+      const cx = flip ? row.length - 1 - c : c;
+      ctx.fillStyle = col;
+      ctx.fillRect(Math.round(x + cx * s), Math.round(y + r * s), s, s);
+    }
+  }
+}
+
+// ------------------------------------------------------------------
+// Sprites — reformers (front & back views)
+// ------------------------------------------------------------------
+const SKIN = '#f0c8a0', EYE = '#1a1a20', ROBE = '#34343e', COLLAR = '#e8e8e8',
+      SHOE = '#402818';
+
+const LUTHER_F = [
+  '.kkkkkkkk.',
+  'kkkkkkkkkk',
+  '.kkkkkkkk.',
+  '.ffffffff.',
+  '.feffffef.',
+  '.ffffffff.',
+  '..ffffff..',
+  '.rrccccrr.',
+  'rrrrrrrrrr',
+  'rrrbbbbrrr',
+  'rrrbbbbrrr',
+  '.rrrrrrrr.',
+  '.rr....rr.',
+  '.ss....ss.',
+];
+const LUTHER_B = [
+  '.kkkkkkkk.',
+  'kkkkkkkkkk',
+  '.kkkkkkkk.',
+  '.kkkkkkkk.',
+  '.kkkkkkkk.',
+  '..kkkkkk..',
+  '.rrrrrrrr.',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  '.rrrrrrrr.',
+  '.rr....rr.',
+  '.ss....ss.',
+];
+const CALVIN_F = [
+  '..kkkkkk..',
+  '.kkkkkkkk.',
+  '.kkkkkkkk.',
+  '.ffffffff.',
+  '.feffffef.',
+  '.dffffffd.',
+  '.dddddddd.',
+  '.rrccccrr.',
+  'rrrrrrrrrr',
+  'rrrggggrrr',
+  'rrrggggrrr',
+  '.rrrrrrrr.',
+  '.rr....rr.',
+  '.ss....ss.',
+];
+const CALVIN_B = [
+  '..kkkkkk..',
+  '.kkkkkkkk.',
+  '.kkkkkkkk.',
+  '.kkkkkkkk.',
+  '.kkkkkkkk.',
+  '..kkkkkk..',
+  '.rrrrrrrr.',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  '.rrrrrrrr.',
+  '.rr....rr.',
+  '.ss....ss.',
+];
+const ZWINGLI_F = [
+  'hhhhhhhhhh',
+  '.hhhhhhhh.',
+  '.ffffffff.',
+  '.feffffef.',
+  '.ffffffff.',
+  '.ffddddff.',
+  '..ffffff..',
+  '.rrccccrr.',
+  'rrrrrrrrrr',
+  'rrrwwwwrrr',
+  'rrrwwwwrrr',
+  '.rrrrrrrr.',
+  '.rr....rr.',
+  '.ss....ss.',
+];
+const ZWINGLI_B = [
+  'hhhhhhhhhh',
+  '.hhhhhhhh.',
+  '.hhhhhhhh.',
+  '.kkkkkkkk.',
+  '.kkkkkkkk.',
+  '..kkkkkk..',
+  '.rrrrrrrr.',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  '.rrrrrrrr.',
+  '.rr....rr.',
+  '.ss....ss.',
+];
+
+const PAL_LUTHER  = { k: '#1a1a20', f: SKIN, e: EYE, r: ROBE, c: COLLAR, b: '#8a5a2b', s: SHOE };
+const PAL_CALVIN  = { k: '#1a1a20', f: SKIN, e: EYE, d: '#5a3a1a', r: '#2a2a34', c: COLLAR, g: '#7a2020', s: SHOE };
+const PAL_ZWINGLI = { h: '#1a1a2e', k: '#3a2a1a', f: SKIN, e: EYE, d: '#6a4a2a', r: '#303a30', c: COLLAR, w: '#e8e8d8', s: SHOE };
+
+// Generic townsfolk / cleric overworld sprite (palette-swapped)
+const PERSON = [
+  '..hhhhhh..',
+  '.hhhhhhhh.',
+  '.ffffffff.',
+  '.feffffef.',
+  '.ffffffff.',
+  '..ffffff..',
+  '.rrrrrrrr.',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  'rrrrrrrrrr',
+  '.rrrrrrrr.',
+  '.rr....rr.',
+  '.ss....ss.',
+];
+function personPal(hair, robe) {
+  return { h: hair, f: SKIN, e: EYE, r: robe, s: SHOE };
+}
+
+// ------------------------------------------------------------------
+// Sprites — battle opponents
+// ------------------------------------------------------------------
+const ART_SELLER = [
+  '..hhhhhhhh..',
+  '.hhhhhhhhhh.',
+  '...ffffff...',
+  '...feffef...',
+  '...ffffff...',
+  '.rrrrrrrrrr.',
+  'wwrrrrrrrryy',
+  'wwrrrrrrrryy',
+  '.rrrrrrrrrr.',
+  '..rrrrrrrr..',
+  '..rr....rr..',
+  '..ss....ss..',
+];
+const ART_PEDDLER = [
+  '...kkkkkk...',
+  '..kkkkkkkk..',
+  '..kkffffkk..',
+  '..kkfeefkk..',
+  '..kkffffkk..',
+  '.kkkkkkkkkk.',
+  '.wwkkkkkkww.',
+  '.wwkkkkkkww.',
+  '..kkkkkkkk..',
+  '..kkkkkkkk..',
+  '..kk....kk..',
+  '..ss....ss..',
+];
+const ART_FRIAR = [
+  '...aaaaaa...',
+  '..aaffffaa..',
+  '...ffffff...',
+  '...feffef...',
+  '...ffffff...',
+  '.rrrrrrrrrr.',
+  '.rrrrrrrrrr.',
+  '.rrrwwwwrrr.',
+  '.rrrrrrrrrr.',
+  '..rrrrrrrr..',
+  '..rr....rr..',
+  '..ss....ss..',
+];
+const ART_TETZEL = [
+  '...kkkkkk...',
+  '..kkkkkkkk..',
+  '...ffffff...',
+  '...feffef...',
+  '...ffffff...',
+  '.kkwwwwwwkk.',
+  '.kkwwwwwwkk.',
+  '.kkwwwwwwkk.',
+  '..kwwwwwwk..',
+  '..cccccccc..',
+  '..cyyyyyyc..',
+  '..cccccccc..',
+];
+const ART_ECK = [
+  '..kkkkkkkk..',
+  '..kkkkkkkk..',
+  '...ffffff...',
+  '...feffef...',
+  '...ffddff...',
+  '.rrrrrrrrrr.',
+  '.rrggggggrr.',
+  '.rrggggggrr.',
+  '.rrrrrrrrrr.',
+  '..rrrrrrrr..',
+  '..rr....rr..',
+  '..ss....ss..',
+];
+const ART_CAJETAN = [
+  'cccccccccccc',
+  '..cccccccc..',
+  '...ffffff...',
+  '...feffef...',
+  '...ffffff...',
+  '.cccccccccc.',
+  '.cccwwwwccc.',
+  '.cccwwwwccc.',
+  '.cccccccccc.',
+  '..cccccccc..',
+  '..cc....cc..',
+  '..ss....ss..',
+];
+const ART_LEGATE = [
+  '....yyyy....',
+  '...yyyyyy...',
+  '...yywwyy...',
+  '...yyyyyy...',
+  '...ffffff...',
+  '...feffef...',
+  '...ffffff...',
+  '.wwwwwwwwww.',
+  '.wwyyyyyyww.',
+  '.wwwwwwwwww.',
+  '.wwwwwwwwww.',
+  '..ww....ww..',
+];
+const PAL_SELLER  = { h: '#6a2a7a', f: SKIN, e: EYE, r: '#7a3a8a', w: '#f0f0e0', y: '#e8c030', s: SHOE };
+const PAL_PEDDLER = { k: '#5a4028', f: '#d8b088', e: EYE, w: '#e8e8d8', s: SHOE };
+const PAL_FRIAR   = { a: '#6a4a2a', f: SKIN, e: EYE, r: '#6a4a2a', w: '#c8b088', s: SHOE };
+const PAL_TETZEL  = { k: '#1a1a20', f: SKIN, e: EYE, w: '#f0f0e8', c: '#7a5028', y: '#e8c030' };
+const PAL_ECK     = { k: '#20202e', f: SKIN, e: EYE, d: '#5a3a1a', r: '#2a2a3e', g: '#8a2020', s: SHOE };
+const PAL_CAJETAN = { c: '#b02020', f: SKIN, e: EYE, w: '#f0f0e8', s: SHOE };
+const PAL_LEGATE  = { y: '#e0b830', w: '#f0f0e8', f: SKIN, e: EYE };
+
+// ------------------------------------------------------------------
+// Player character definitions
+// ------------------------------------------------------------------
+const CHARACTERS = {
+  luther: {
+    name: 'LUTHER', full: 'Martin Luther',
+    front: LUTHER_F, back: LUTHER_B, pal: PAL_LUTHER,
+    blurb: ['German monk & professor.', 'Sparked it all in 1517', 'at Wittenberg.'],
+    moves: [
+      { name: '95 THESES', pow: 40, tag: 'scripture',
+        fact: 'Luther posted his 95 Theses against the sale of indulgences at Wittenberg on Oct 31, 1517.' },
+      { name: 'SOLA FIDE', pow: 50, tag: 'grace',
+        fact: '"Faith alone": Luther taught that people are justified by faith in Christ, not by works or payments.' },
+      { name: 'HERE I STAND', pow: 65, tag: 'conviction', acc: 0.85,
+        fact: 'At the Diet of Worms (1521) Luther refused to recant: "Here I stand, I can do no other" — words tradition remembers, even if the exact phrase is debated.' },
+      { name: 'GERMAN BIBLE', heal: 0.45,
+        fact: 'Hiding at Wartburg Castle, Luther translated the New Testament into German (1522) so ordinary people could read it.' },
+    ],
+  },
+  calvin: {
+    name: 'CALVIN', full: 'John Calvin',
+    front: CALVIN_F, back: CALVIN_B, pal: PAL_CALVIN,
+    blurb: ['French scholar of Geneva.', 'Systematized Reformed', 'theology in 1536.'],
+    moves: [
+      { name: 'SOLA SCRIPTURA', pow: 40, tag: 'scripture',
+        fact: '"Scripture alone": the Bible, not church tradition or papal decree, is the highest authority.' },
+      { name: 'PREDESTINATION', pow: 50, tag: 'grace',
+        fact: 'Calvin emphasized that salvation rests entirely on God\'s sovereign choice — grace, not human merit.' },
+      { name: 'INSTITUTES', pow: 65, tag: 'conviction', acc: 0.85,
+        fact: 'Calvin\'s "Institutes of the Christian Religion" (1536) became the most influential summary of Reformed doctrine.' },
+      { name: 'GENEVA REFORM', heal: 0.45,
+        fact: 'Calvin turned Geneva into a model reform city and refuge; its Academy (1559) trained pastors for all Europe.' },
+    ],
+  },
+  zwingli: {
+    name: 'ZWINGLI', full: 'Ulrich Zwingli',
+    front: ZWINGLI_F, back: ZWINGLI_B, pal: PAL_ZWINGLI,
+    blurb: ['People\'s priest of Zurich.', 'Preached reform from', 'the Bible in 1519.'],
+    moves: [
+      { name: '67 ARTICLES', pow: 40, tag: 'scripture',
+        fact: 'Zwingli defended his 67 Articles at the First Zurich Disputation (1523) — and the city council backed him.' },
+      { name: 'SAUSAGE SUPPER', pow: 50, tag: 'grace',
+        fact: 'The Affair of the Sausages (1522): friends ate sausage during Lent; Zwingli defended them, arguing fasting rules aren\'t in the Bible.' },
+      { name: 'ICONOCLASM', pow: 65, tag: 'conviction', acc: 0.85,
+        fact: 'Zurich removed images and relics from its churches (1524), believing worship should center on the Word alone.' },
+      { name: 'ZURICH RALLY', heal: 0.45,
+        fact: 'Zwingli began preaching straight through the Gospel of Matthew in 1519 — verse by verse, in the people\'s language.' },
+    ],
+  },
+};
+
+// ------------------------------------------------------------------
+// Opponents
+// ------------------------------------------------------------------
+const ENEMIES = {
+  seller: {
+    name: 'INDULGENCE SELLER', art: ART_SELLER, pal: PAL_SELLER,
+    weak: 'grace', hpMul: 1,
+    moves: [
+      { name: 'INDULGENCE SALE', pow: 28 },
+      { name: 'COIN JINGLE', pow: 24 },
+      { name: 'GUILT TRIP', pow: 34 },
+    ],
+    intro: 'wants to sell you salvation!',
+    effMsg: 'Grace cannot be bought — the sales pitch collapses!',
+  },
+  peddler: {
+    name: 'RELIC PEDDLER', art: ART_PEDDLER, pal: PAL_PEDDLER,
+    weak: 'scripture', hpMul: 1,
+    moves: [
+      { name: 'DUBIOUS RELIC', pow: 28 },
+      { name: 'SAINT\'S TOE', pow: 26 },
+      { name: 'MIRACLE CLAIM', pow: 34 },
+    ],
+    intro: 'brandishes the FOURTH skull of John the Baptist you\'ve seen this week!',
+    effMsg: 'The relic is nowhere in Scripture — its power fades!',
+  },
+  friar: {
+    name: 'WANDERING FRIAR', art: ART_FRIAR, pal: PAL_FRIAR,
+    weak: 'conviction', hpMul: 1,
+    moves: [
+      { name: 'LATIN CHANT', pow: 28 },
+      { name: 'SCHOLASTIC QUIBBLE', pow: 32 },
+      { name: 'ROSARY RATTLE', pow: 24 },
+    ],
+    intro: 'blocks your path. Old habits die hard!',
+    effMsg: 'Bold conviction cuts through the Latin fog!',
+  },
+  tetzel: {
+    name: 'JOHANN TETZEL', art: ART_TETZEL, pal: PAL_TETZEL,
+    weak: 'grace', hpMul: 1.3, boss: true,
+    moves: [
+      { name: 'INDULGENCE CHEST', pow: 36 },
+      { name: 'COIN RINGS RHYME', pow: 44 },
+      { name: 'PAPAL WARRANT', pow: 40 },
+    ],
+    intro: 'cries: "When the coin in the coffer rings, the soul from purgatory springs!"',
+    effMsg: 'Forgiveness is a gift of grace, not a purchase!',
+    lesson: 'Johann Tetzel was the Dominican friar whose aggressive indulgence sales near Wittenberg provoked Luther\'s 95 Theses. The famous coin-coffer jingle is ATTRIBUTED to him — he probably never said those exact words, but his preaching sold the same idea, and Luther attacked it by name.',
+  },
+  eck: {
+    name: 'JOHANN ECK', art: ART_ECK, pal: PAL_ECK,
+    weak: 'scripture', hpMul: 1.35, boss: true,
+    moves: [
+      { name: 'LEIPZIG DEBATE', pow: 42 },
+      { name: 'OBELISKS', pow: 38 },
+      { name: 'APPEAL TO AUTHORITY', pow: 46 },
+    ],
+    intro: 'the champion debater of Ingolstadt, takes the podium!',
+    effMsg: 'Scripture outweighs councils and popes — the argument lands!',
+    lesson: 'At the Leipzig Debate (1519), Johann Eck pushed Luther to admit he ranked Scripture above popes AND councils — a radical claim that made the break with Rome almost inevitable.',
+  },
+  cajetan: {
+    name: 'CARDINAL CAJETAN', art: ART_CAJETAN, pal: PAL_CAJETAN,
+    weak: 'conviction', hpMul: 1.4, boss: true,
+    moves: [
+      { name: 'PAPAL BULL', pow: 44 },
+      { name: 'DEMAND: RECANT!', pow: 48 },
+      { name: 'THOMIST LOGIC', pow: 40 },
+    ],
+    intro: 'demands one word: "REVOCA" — recant!',
+    effMsg: 'Conscience bound by the Word will not bend!',
+    lesson: 'Cardinal Cajetan interviewed Luther at Augsburg (1518) and demanded he recant. Luther refused without being shown his error from Scripture — then slipped out of the city by night.',
+  },
+  legate: {
+    name: 'PAPAL LEGATE', art: ART_LEGATE, pal: PAL_LEGATE,
+    weak: 'conviction', hpMul: 1.55, boss: true,
+    moves: [
+      { name: 'EXCOMMUNICATION', pow: 48 },
+      { name: 'IMPERIAL EDICT', pow: 46 },
+      { name: 'ANATHEMA SIT', pow: 52 },
+    ],
+    intro: 'reads the edict of the Emperor before all the Diet!',
+    effMsg: 'An unshaken conscience outlasts every decree!',
+    lesson: 'The Diet of Worms (1521) declared Luther an outlaw via the Edict of Worms. Frederick the Wise "kidnapped" him to safety at Wartburg Castle, where he began his German Bible.',
+  },
+};
+
+// ------------------------------------------------------------------
+// History facts shown after wild battles
+// ------------------------------------------------------------------
+const FACTS = [
+  'The printing press was the Reformation\'s secret weapon: cheap pamphlets spread Luther\'s ideas across Europe in weeks, not decades.',
+  'The word PROTESTANT comes from the 1529 "Protestation at Speyer," when reforming princes protested an imperial ban on Luther\'s teaching.',
+  'In 1520 the pope\'s bull "Exsurge Domine" threatened Luther with excommunication. Luther burned it publicly. He was excommunicated in 1521.',
+  'Luther married Katharina von Bora, a former nun, in 1525 — helping establish the married clergy household as a Protestant norm.',
+  'The three great "solas": SOLA SCRIPTURA (Scripture alone), SOLA FIDE (faith alone), SOLA GRATIA (grace alone).',
+  'Zwingli died in battle at Kappel in 1531, serving as a chaplain when Catholic cantons attacked Zurich.',
+  'At the Marburg Colloquy (1529) Luther and Zwingli agreed on 14 of 15 points — but split forever over the Lord\'s Supper.',
+  'Calvin\'s Geneva welcomed thousands of religious refugees, who carried Reformed ideas home to France, Scotland, the Netherlands and England.',
+  'The Peace of Augsburg (1555) let each prince choose his territory\'s religion — Lutheran or Catholic — a rule later jurists summed up as "cuius regio, eius religio."',
+  'Relic collections got out of hand: Erasmus quipped that Europe held enough alleged wood of the True Cross to fill a ship. Frederick the Wise\'s own collection topped 19,000 pieces.',
+  'Rome responded with the Counter-Reformation: the Council of Trent (1545-1563) reformed abuses but reaffirmed disputed doctrines.',
+  'To Rome, the reformers were the heretics; to the reformers, Rome had strayed. Each side saw itself as defending the true faith.',
+  'Luther composed hymns like "A Mighty Fortress Is Our God" so congregations could sing theology in their own tongue.',
+  'Indulgences were certificates said to reduce time in purgatory. The 1517 campaign helped fund St. Peter\'s Basilica in Rome.',
+  'William Tyndale, inspired by Luther, printed an English New Testament (1526). He was executed in 1536; his work shaped the King James Bible.',
+  'Luther translated the whole Bible into German by 1534, shaping the modern German language itself.',
+  'Anabaptists went further than Luther, Calvin or Zwingli — baptizing adult believers only — and were persecuted by Catholics AND Protestants.',
+];
+
+// ------------------------------------------------------------------
+// World map (40 x 30 tiles)
+//  t tree  . grass  g tall grass  w water  p path  x flowers
+//  W wall  R roof   F fence  s sign  1-6 doors
+// ------------------------------------------------------------------
+const MAP_W = 40, MAP_H = 30;
+const RAW_MAP = [
+  'tttttttttttttttttttttttttttttttttttttttt',
+  't......................................t',
+  't..RRRRRR.......RRRRR........RRRRRR....t',
+  't..RRRRRR.......RRRRR........RRRRRR....t',
+  't..WW1WWW.......WW2WW........WWW3WW....t',
+  't...sp...........p.p..........p..s.....t',
+  't...pp....gggg...ppp..........pp.......t',
+  't...pppppppppppppppppppppppppppp.......t',
+  't......gggg.....p......ggg.............t',
+  't...............p......ggg......ttt....t',
+  't.....xx........p...............ttt....t',
+  't.....xx....ppppppppp..................t',
+  't...........p.......p......wwww........t',
+  't...........p.......p......wwww........t',
+  't..ggg......p.......p......wwww........t',
+  't..ggg......p.......p..................t',
+  't..ggg......p.......ppppppppppp........t',
+  't...........p................p.........t',
+  't..RRRRRR...p...RRRRRR.......p.........t',
+  't..RRRRRR...p...RRRRRR.......p.........t',
+  't..WWW4WW...p...WW5WWW.......p.........t',
+  't.....p.....p....sp..........p.........t',
+  't.....pppppppppppp...........p.........t',
+  't...........p.........RRRRRRRRRR.......t',
+  't...gggg....p.........RRRRRRRRRR.......t',
+  't...gggg....p.........WWWW6WWWWW.......t',
+  't...gggg....ppppppppppppppps...........t',
+  't......................................t',
+  't...x..x...........x..........x...x....t',
+  'tttttttttttttttttttttttttttttttttttttttt',
+];
+const MAP = RAW_MAP.map(r => (r + 't'.repeat(MAP_W)).slice(0, MAP_W));
+
+const SOLID = new Set(['t', 'w', 'W', 'R', 'F', 's', '1', '2', '3', '4', '5', '6']);
+function tileAt(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return 't';
+  return MAP[ty][tx];
+}
+
+const SIGNS = {
+  '4,5':  'CASTLE CHURCH of WITTENBERG. "Whoever has a thesis, nail it here."',
+  '33,5': 'LEIPZIG DEBATE HALL. Today: Dr. ECK vs. all challengers.',
+  '17,21':'MARBURG CHAPEL. Colloquy in session — reformers only.',
+  '27,26':'IMPERIAL DIET OF WORMS. By order of Emperor Charles V.',
+};
+
+// ------------------------------------------------------------------
+// Game state
+// ------------------------------------------------------------------
+const game = {
+  state: 'title',            // title | select | world | dialog | battle | lesson | ending
+  frame: 0,
+  selIndex: 0,
+  charKey: null,
+  flags: { theses: false, tetzel: false, eck: false, cajetan: false, legate: false, marburg: false, won: false },
+  factsSeen: [],
+};
+const player = {
+  tx: 17, ty: 9, px: 17 * TILE, py: 9 * TILE,
+  dir: 'down', moving: false, mx: 0, my: 0, step: 0,
+  level: 5, xp: 0, hp: 0, maxHp: 0,
+  moveFactShown: {},
+};
+function statsFor(level) {
+  return { maxHp: 40 + level * 6, atk: 10 + level * 2 };
+}
+function xpNeed(level) { return level * 20; }
+function initPlayerStats() {
+  const s = statsFor(player.level);
+  player.maxHp = s.maxHp;
+  player.hp = s.maxHp;
+}
+
+// ------------------------------------------------------------------
+// NPCs
+// ------------------------------------------------------------------
+const NPCS = [
+  {
+    id: 'tetzel', tx: 6, ty: 6, art: PERSON, pal: personPal('#1a1a20', '#26262e'),
+    boss: 'tetzel', level: 8,
+    talk: () => game.flags.tetzel
+      ? ['TETZEL: My coffers ring hollow... my profits have gone to purgatory.',
+         'TETZEL: Perhaps forgiveness was never for sale.']
+      : ['TETZEL: Step right up! For a few coins, your sins — POOF — forgiven!',
+         'TETZEL: You look skeptical, friend. Shall we DEBATE it?'],
+  },
+  {
+    id: 'eck', tx: 32, ty: 6, art: PERSON, pal: personPal('#20202e', '#2a2a3e'),
+    boss: 'eck', level: 11,
+    talk: () => game.flags.eck
+      ? ['ECK: Hmph. You debate well... for a heretic. Rome will hear of this.']
+      : ['ECK: I am Dr. Johann Eck. I have crushed every debater in Leipzig.',
+         'ECK: You claim Scripture stands above popes AND councils? Prove it!'],
+  },
+  {
+    id: 'cajetan', tx: 24, ty: 14, art: PERSON, pal: personPal('#b02020', '#b02020'),
+    boss: 'cajetan', level: 13,
+    talk: () => game.flags.cajetan
+      ? ['CAJETAN: I will not speak with that beast again. It has deep eyes and wonderful speculations in its head.']
+      : ['CAJETAN: I am Cardinal Cajetan, legate of His Holiness.',
+         'CAJETAN: I require but one word from you: REVOCA. Recant!'],
+  },
+  {
+    id: 'guard', tx: 25, ty: 26, art: PERSON, pal: personPal('#888898', '#666676'),
+    talk: () => bossCount() >= 3
+      ? ['GUARD: The Emperor awaits. Enter the Diet... and may your conscience hold.']
+      : ['GUARD: The DIET OF WORMS is in session. None may enter...',
+         'GUARD: ...save those who have bested TETZEL, ECK, and CAJETAN in debate.',
+         `GUARD: You have won ${bossCount()} of 3 great debates.`,
+         'GUARD: And no — the Diet is a MEETING in the city of Worms. Nobody is eating worms. We are very tired of that joke.'],
+  },
+  {
+    id: 'towns1', tx: 13, ty: 12, art: PERSON, pal: personPal('#6a4a2a', '#7a5a30'),
+    talk: () => ['VILLAGER: A monk nailed 95 complaints to the church door up north!',
+      'VILLAGER: Thanks to the new PRINTING PRESS, all of Europe read them within months.'],
+  },
+  {
+    id: 'towns2', tx: 20, ty: 10, art: PERSON, pal: personPal('#c8a030', '#4a6a3a'),
+    talk: () => ['WOMAN: They call your kind heretics. Rome\'s defenders, that is.',
+      'WOMAN: But you call Rome corrupt. History, I suppose, is a matter of where you stand.'],
+  },
+  {
+    id: 'towns3', tx: 7, ty: 22, art: PERSON, pal: personPal('#3a3a4a', '#5a4a6a'),
+    talk: () => ['PRINTER: My press runs day and night! Pamphlets, tracts, Bibles...',
+      'PRINTER: Ideas used to travel by donkey. Now they travel by the thousand pages.',
+      'PRINTER: Forgive my haste — I have some very PRESSING matters.'],
+  },
+  {
+    id: 'kid', tx: 31, ty: 27, art: PERSON, pal: personPal('#c87830', '#4a6aa0'),
+    talk: () => ['KID: The Emperor called a DIET OF WORMS! Bleeeh! Who would EAT worms?!',
+      'KID: Papa says it\'s just a big meeting in a city called Worms.',
+      'KID: I\'m still not going.'],
+  },
+  {
+    id: 'exmonk', tx: 10, ty: 17, art: PERSON, pal: personPal('#5a4028', '#6a4a2a'),
+    talk: () => ['MONK: I used to sell indulgences, you know.',
+      'MONK: I gave it up. I just couldn\'t forgive myself.',
+      'MONK: ...and apparently neither could anyone else, at any price.'],
+  },
+  {
+    id: 'rival', tx: 19, ty: 21, art: PERSON, pal: null, // set after character select
+    rival: true,
+    talk: () => game.flags.marburg
+      ? ['They say we agreed on fourteen points of fifteen at Marburg...',
+         '...yet parted over the Supper. Pray we remain brothers still.']
+      : ['A fellow reformer stands here, deep in thought about the Lord\'s Supper...'],
+  },
+];
+function bossCount() {
+  return ['tetzel', 'eck', 'cajetan'].filter(k => game.flags[k]).length;
+}
+function npcAt(tx, ty) {
+  return NPCS.find(n => n.tx === tx && n.ty === ty);
+}
+
+// ------------------------------------------------------------------
+// Dialog system
+// ------------------------------------------------------------------
+const dialog = { pages: [], page: 0, chars: 0, done: null, prevState: 'world' };
+function say(lines, done) {
+  dialog.pages = Array.isArray(lines) ? lines.slice() : [lines];
+  dialog.page = 0;
+  dialog.chars = 0;
+  dialog.done = done || null;
+  dialog.prevState = game.state === 'dialog' ? dialog.prevState : game.state;
+  game.state = 'dialog';
+}
+function wrapText(text, maxChars) {
+  const words = String(text).split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length > maxChars) { lines.push(cur.trim()); cur = w; }
+    else cur += ' ' + w;
+  }
+  if (cur.trim()) lines.push(cur.trim());
+  return lines;
+}
+function drawTextBox(text, x, y, w, h, visChars) {
+  ctx.fillStyle = '#f8f8f0';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#20203a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  ctx.fillStyle = '#20203a';
+  ctx.font = '8px "Courier New", monospace';
+  const maxChars = Math.floor((w - 14) / 5);
+  const lines = wrapText(text, maxChars);
+  let remaining = visChars === undefined ? Infinity : visChars;
+  for (let i = 0; i < lines.length && i < Math.floor((h - 10) / 10); i++) {
+    const line = lines[i];
+    const shown = line.slice(0, Math.max(0, remaining));
+    remaining -= line.length;
+    ctx.fillText(shown, x + 7, y + 13 + i * 10);
+  }
+  return lines.length;
+}
+
+// ------------------------------------------------------------------
+// Battle system
+// ------------------------------------------------------------------
+const battle = {
+  active: false, enemy: null, enemyKey: null,
+  eHp: 0, eMaxHp: 0, eShow: 0, pShow: 0,
+  eLevel: 5, phase: 'msg', queue: [], menuIndex: 0,
+  healUses: 0, isBoss: false, friendly: false,
+  afterWin: null, shake: 0,
+};
+function addMsg(text, fn) { battle.queue.push({ text, fn }); }
+
+function startBattle(key, level, opts = {}) {
+  const e = ENEMIES[key] || opts.custom;
+  battle.active = true;
+  battle.enemyKey = key;
+  battle.enemy = e;
+  battle.eLevel = level;
+  battle.eMaxHp = Math.floor((30 + level * 7) * (e.hpMul || 1));
+  battle.eHp = battle.eMaxHp;
+  battle.eShow = battle.eMaxHp;
+  battle.pShow = player.hp;
+  battle.queue = [];
+  battle.menuIndex = 0;
+  battle.healUses = 3;
+  battle.isBoss = !!e.boss || !!opts.boss;
+  battle.friendly = !!opts.friendly;
+  battle.afterWin = opts.afterWin || null;
+  battle.phase = 'msg';
+  battle.shake = 0;
+  audio.encounter();
+  addMsg(`${e.name} ${e.intro || 'challenges you to a debate!'}`);
+  game.state = 'battle';
+}
+
+function playerAtk() { return statsFor(player.level).atk; }
+function calcDamage(pow, atkLevel, atk, eff) {
+  const base = (pow * atk) / 40;
+  const rand = 0.85 + Math.random() * 0.3;
+  return Math.max(1, Math.floor(base * eff * rand));
+}
+
+function useMove(mi) {
+  const chr = CHARACTERS[game.charKey];
+  const mv = chr.moves[mi];
+  const e = battle.enemy;
+  battle.phase = 'msg';
+
+  if (mv.heal) {
+    if (battle.healUses <= 0) {
+      addMsg(`No strength left for ${mv.name}! Choose another argument.`,
+        () => { battle.phase = 'menu'; });
+      return;
+    }
+    battle.healUses--;
+    addMsg(`${chr.name} takes heart with ${mv.name}!`, () => {
+      player.hp = Math.min(player.maxHp, player.hp + Math.floor(player.maxHp * mv.heal));
+      audio.heal();
+    });
+    addMsg('Conviction restored!');
+  } else {
+    const acc = mv.acc === undefined ? 1 : mv.acc;
+    addMsg(`${chr.name} argues ${mv.name}!`);
+    if (Math.random() > acc) {
+      addMsg('...but the argument goes wide of the mark!');
+    } else {
+      const eff = mv.tag === e.weak ? 1.5 : 1;
+      const dmg = calcDamage(mv.pow, player.level, playerAtk(), eff);
+      addMsg('', () => {  // silent damage application beat
+        battle.eHp = Math.max(0, battle.eHp - dmg);
+        battle.shake = 8;
+        audio.hit();
+      });
+      battle.queue[battle.queue.length - 1].auto = true;
+      if (eff > 1) addMsg(`It's super effective! ${e.effMsg || ''}`);
+    }
+  }
+  if (!player.moveFactShown[mv.name] && mv.fact) {
+    player.moveFactShown[mv.name] = true;
+    addMsg(`* ${mv.fact}`);
+  }
+  addMsg('', () => { afterPlayerMove(); });
+  battle.queue[battle.queue.length - 1].auto = true;
+}
+
+function afterPlayerMove() {
+  if (battle.eHp <= 0) { winBattle(); return; }
+  enemyTurn();
+}
+
+function enemyTurn() {
+  const e = battle.enemy;
+  const mv = e.moves[Math.floor(Math.random() * e.moves.length)];
+  addMsg(`${e.name} counters with ${mv.name}!`);
+  addMsg('', () => {
+    const atk = 10 + battle.eLevel * 2;
+    const dmg = calcDamage(mv.pow, battle.eLevel, atk, 1);
+    player.hp = Math.max(0, player.hp - dmg);
+    battle.shake = 8;
+    audio.hit();
+  });
+  battle.queue[battle.queue.length - 1].auto = true;
+  addMsg('', () => {
+    if (player.hp <= 0) loseBattle();
+    else battle.phase = 'menu';
+  });
+  battle.queue[battle.queue.length - 1].auto = true;
+}
+
+function winBattle() {
+  const e = battle.enemy;
+  audio.faint();
+  if (battle.friendly) {
+    addMsg(`${e.name} concedes the point — with a smile.`);
+  } else {
+    addMsg(`${e.name} is refuted! The crowd murmurs in agreement.`);
+  }
+  const gain = Math.floor(battle.eLevel * (battle.isBoss ? 25 : 12));
+  addMsg(`You gained ${gain} XP!`, () => { audio.win(); });
+  player.xp += gain;
+  while (player.xp >= xpNeed(player.level)) {
+    player.xp -= xpNeed(player.level);
+    player.level++;
+    const s = statsFor(player.level);
+    const gained = s.maxHp - player.maxHp;
+    player.maxHp = s.maxHp;
+    player.hp = Math.min(player.maxHp, player.hp + gained);
+    addMsg(`${CHARACTERS[game.charKey].name} grew to level ${player.level}!`, () => audio.level());
+  }
+  addMsg('', () => { endBattle(true); });
+  battle.queue[battle.queue.length - 1].auto = true;
+}
+
+function loseBattle() {
+  addMsg('You are out of arguments!');
+  addMsg('You withdraw to the inn to study and recover...', () => {
+    player.hp = player.maxHp;
+    player.tx = 18; player.ty = 6;
+    player.px = player.tx * TILE; player.py = player.ty * TILE;
+    player.moving = false;
+    endBattle(false);
+  });
+}
+
+function endBattle(won) {
+  battle.active = false;
+  game.state = 'world';
+  if (won && battle.afterWin) battle.afterWin();
+  else if (won && !battle.friendly) showLesson(randomFact());
+}
+function randomFact() {
+  const unseen = FACTS.filter((_, i) => !game.factsSeen.includes(i));
+  const pool = unseen.length ? unseen : FACTS;
+  const fact = pool[Math.floor(Math.random() * pool.length)];
+  const idx = FACTS.indexOf(fact);
+  if (!game.factsSeen.includes(idx)) game.factsSeen.push(idx);
+  return fact;
+}
+const lesson = { text: '' };
+function showLesson(text) {
+  lesson.text = text;
+  game.state = 'lesson';
+}
+
+// ------------------------------------------------------------------
+// World interaction
+// ------------------------------------------------------------------
+function facingTile() {
+  let { tx, ty } = player;
+  if (player.dir === 'up') ty--;
+  if (player.dir === 'down') ty++;
+  if (player.dir === 'left') tx--;
+  if (player.dir === 'right') tx++;
+  return { tx, ty };
+}
+
+function bossBattleFor(npc) {
+  const key = npc.boss;
+  startBattle(key, npc.level, {
+    afterWin: () => {
+      game.flags[key] = true;
+      const l = ENEMIES[key].lesson;
+      if (l) showLesson(l);
+    },
+  });
+}
+
+function interact() {
+  const { tx, ty } = facingTile();
+  const npc = npcAt(tx, ty);
+  if (npc) {
+    if (npc.rival && !game.flags.marburg) {
+      const rk = rivalKey();
+      const rc = CHARACTERS[rk];
+      say([
+        `${rc.name}: Ah, a fellow reformer! We agree on grace, on Scripture, on faith...`,
+        `${rc.name}: ...but on the LORD'S SUPPER we differ. Shall we debate it, as friends?`,
+      ], () => {
+        startBattle(null, 10, {
+          friendly: true,
+          custom: {
+            name: rc.name, art: rc.front, pal: rc.pal,
+            weak: 'conviction', hpMul: 1.2,
+            moves: [
+              { name: 'THIS IS MY BODY', pow: 38 },
+              { name: 'IT SIGNIFIES', pow: 38 },
+              { name: 'FRIENDLY REBUKE', pow: 42 },
+            ],
+            intro: 'opens the friendly colloquy!',
+            effMsg: 'A firm but brotherly point!',
+          },
+          afterWin: () => {
+            game.flags.marburg = true;
+            showLesson('The Marburg Colloquy (1529): Luther and Zwingli agreed on 14 of 15 articles, but split over whether Christ is bodily present in the Supper. Luther held "This IS my body"; Zwingli read it as "this SIGNIFIES my body." Protestantism has had branches ever since.');
+          },
+        });
+      });
+      return;
+    }
+    if (npc.boss && !game.flags[npc.boss]) {
+      say(npc.talk(), () => bossBattleFor(npc));
+    } else {
+      say(npc.talk());
+    }
+    return;
+  }
+  const t = tileAt(tx, ty);
+  const signText = SIGNS[`${tx},${ty}`];
+  if (t === 's' && signText) { say(signText); return; }
+  if (t === 'w') { say('You gaze into the water. Your reflection stares back, looking about 95% convinced.'); return; }
+  if (t === 'x') { say('You stop to smell the flowers. They neither toil, nor spin, nor sell indulgences.'); return; }
+  if (t === '1') { // Castle Church
+    if (!game.flags.theses) {
+      say([
+        'The great wooden door of the CASTLE CHURCH stands before you.',
+        'You take hammer and nail... THUNK! THUNK! THUNK!',
+        'You have posted your theses against the sale of indulgences! NAILED IT.',
+      ], () => {
+        game.flags.theses = true;
+        showLesson('October 31, 1517: Luther published 95 Theses against indulgences. Tradition says he nailed them to the Castle Church door — the town notice board — but historians still debate whether he nailed them or only MAILED them to his archbishop. Either way, printers spread them across Europe within months.');
+      });
+    } else {
+      say('Your theses hang on the door. A crowd gathers to read them daily.');
+    }
+    return;
+  }
+  if (t === '2') { // Inn
+    say(['INNKEEPER: Weary of disputation, friend? Rest here — our beds are 95% theses-free.',
+         'INNKEEPER: Complaints? We only accept them nailed to the door.',
+         '...You rest. Your conviction is fully restored!'], () => {
+      player.hp = player.maxHp;
+      audio.heal();
+    });
+    return;
+  }
+  if (t === '3') say('The debate hall is packed. Dr. ECK holds court outside.');
+  if (t === '4') say('The PRINT SHOP clatters within. The smell of fresh ink fills the air.');
+  if (t === '5') say('Within the chapel, reformers argue in low, earnest voices.');
+  if (t === '6') { // Diet of Worms
+    if (game.flags.legate) {
+      say('The Diet has adjourned. Your words echo in the empty hall.');
+      return;
+    }
+    if (bossCount() < 3) {
+      say('The doors are barred. The GUARD eyes you sternly.');
+      return;
+    }
+    say([
+      'You push open the doors of the IMPERIAL DIET.',
+      'Princes, bishops and the Emperor himself turn to face you.',
+      'The PAPAL LEGATE rises: "Do you recant, or do you not?"',
+    ], () => {
+      startBattle('legate', 16, {
+        afterWin: () => {
+          game.flags.legate = true;
+          game.flags.won = true;
+          game.state = 'ending';
+          ending.page = 0;
+          audio.win();
+        },
+      });
+    });
+  }
+}
+
+function rivalKey() {
+  if (game.charKey === 'luther') return 'zwingli';
+  if (game.charKey === 'zwingli') return 'luther';
+  return 'luther';
+}
+
+// ------------------------------------------------------------------
+// Ending
+// ------------------------------------------------------------------
+const ending = { page: 0 };
+const ENDING_PAGES = [
+  ['YOU STOOD FIRM AT THE DIET OF WORMS!', '', '"My conscience is captive to the Word of God. I cannot and will not recant."'],
+  ['The Reformation could not be stopped.', '', 'Bibles in common tongues. Congregations singing. Presses running day and night.'],
+  ['But the real story had costs the game leaves out:', 'wars of religion, persecution on all sides,', 'and a Christendom divided for centuries.'],
+  ['1531: Zwingli falls at Kappel.', '1546: Luther dies at Eisleben.', '1555: The Peace of Augsburg brings uneasy calm.', '1564: Calvin dies in Geneva.'],
+  ['Their ideas — grace, faith, Scripture, conscience —', 'reshaped churches, schools, languages and nations.', '', 'THE END. (Press A to keep exploring.)'],
+];
+
+// ------------------------------------------------------------------
+// Wild encounters
+// ------------------------------------------------------------------
+const WILD = [
+  { key: 'seller', min: 4, max: 6 },
+  { key: 'peddler', min: 5, max: 7 },
+  { key: 'friar', min: 5, max: 8 },
+];
+function maybeEncounter() {
+  if (tileAt(player.tx, player.ty) !== 'g') return;
+  if (Math.random() > 0.13) return;
+  const w = WILD[Math.floor(Math.random() * WILD.length)];
+  const lvl = w.min + Math.floor(Math.random() * (w.max - w.min + 1));
+  say(`A zealous ${ENEMIES[w.key].name} steps from the tall grass and demands a debate!`,
+    () => startBattle(w.key, lvl));
+}
+
+// ------------------------------------------------------------------
+// Tile rendering
+// ------------------------------------------------------------------
+function drawTile(t, x, y, tx, ty) {
+  const f = game.frame;
+  switch (t) {
+    case '.': case 'x': case 'g': case 's': {
+      ctx.fillStyle = '#78b850';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#6aa848';
+      if ((tx * 7 + ty * 13) % 5 === 0) { ctx.fillRect(x + 3, y + 4, 2, 2); ctx.fillRect(x + 10, y + 10, 2, 2); }
+      if ((tx * 3 + ty * 11) % 7 === 0) ctx.fillRect(x + 8, y + 3, 2, 2);
+      break;
+    }
+    case 'p':
+      ctx.fillStyle = '#d8c088';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#c8b078';
+      if ((tx + ty) % 2) { ctx.fillRect(x + 4, y + 6, 3, 2); ctx.fillRect(x + 10, y + 11, 3, 2); }
+      break;
+    case 'w': {
+      ctx.fillStyle = '#3868c8';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#5888e0';
+      const off = Math.floor(f / 30) % 2 ? 2 : 0;
+      ctx.fillRect(x + 2 + off, y + 4, 5, 1);
+      ctx.fillRect(x + 8 - off, y + 10, 5, 1);
+      break;
+    }
+    case 't':
+      ctx.fillStyle = '#78b850';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#2a6a2a';
+      ctx.fillRect(x + 2, y + 1, 12, 10);
+      ctx.fillStyle = '#3a8a3a';
+      ctx.fillRect(x + 3, y + 2, 10, 4);
+      ctx.fillStyle = '#6a4a2a';
+      ctx.fillRect(x + 6, y + 11, 4, 5);
+      break;
+    case 'W':
+      ctx.fillStyle = '#d8d0b8';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#b8b098';
+      ctx.fillRect(x, y + 7, TILE, 1);
+      ctx.fillRect(x + 7, y, 1, 7);
+      ctx.fillRect(x + 3, y + 8, 1, 8);
+      ctx.fillRect(x + 11, y + 8, 1, 8);
+      break;
+    case 'R':
+      ctx.fillStyle = '#a83828';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#c04830';
+      ctx.fillRect(x, y + 3, TILE, 2);
+      ctx.fillRect(x, y + 9, TILE, 2);
+      break;
+    case '1': case '2': case '3': case '4': case '5': case '6':
+      ctx.fillStyle = '#d8d0b8';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#6a4a2a';
+      ctx.fillRect(x + 2, y + 2, 12, 14);
+      ctx.fillStyle = '#4a3018';
+      ctx.fillRect(x + 3, y + 3, 10, 13);
+      ctx.fillStyle = '#e8c030';
+      ctx.fillRect(x + 10, y + 9, 2, 2);
+      break;
+    default:
+      ctx.fillStyle = '#78b850';
+      ctx.fillRect(x, y, TILE, TILE);
+  }
+  if (t === 'g') {
+    ctx.fillStyle = '#3a8a3a';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(x + 1 + i * 4, y + 6, 2, 9);
+      ctx.fillRect(x + 2 + i * 4, y + 4, 1, 3);
+    }
+  }
+  if (t === 'x') {
+    ctx.fillStyle = '#e05858';
+    ctx.fillRect(x + 3, y + 4, 3, 3);
+    ctx.fillStyle = '#e8c030';
+    ctx.fillRect(x + 10, y + 9, 3, 3);
+  }
+  if (t === 's') {
+    ctx.fillStyle = '#8a6a3a';
+    ctx.fillRect(x + 3, y + 3, 10, 7);
+    ctx.fillStyle = '#6a4a2a';
+    ctx.fillRect(x + 7, y + 10, 2, 5);
+    ctx.fillStyle = '#4a3018';
+    ctx.fillRect(x + 5, y + 5, 6, 1);
+    ctx.fillRect(x + 5, y + 7, 6, 1);
+  }
+}
+
+// ------------------------------------------------------------------
+// World update & render
+// ------------------------------------------------------------------
+function canWalk(tx, ty) {
+  if (SOLID.has(tileAt(tx, ty))) return false;
+  if (npcAt(tx, ty)) return false;
+  return true;
+}
+
+function updateWorld() {
+  if (player.moving) {
+    player.px += player.mx * 2;
+    player.py += player.my * 2;
+    player.step++;
+    if (player.step >= 8) {
+      player.moving = false;
+      player.px = player.tx * TILE;
+      player.py = player.ty * TILE;
+      maybeEncounter();
+    }
+    return;
+  }
+  if (pressed.A) { interact(); return; }
+  let dx = 0, dy = 0, dir = null;
+  if (held.up) { dy = -1; dir = 'up'; }
+  else if (held.down) { dy = 1; dir = 'down'; }
+  else if (held.left) { dx = -1; dir = 'left'; }
+  else if (held.right) { dx = 1; dir = 'right'; }
+  if (dir) {
+    player.dir = dir;
+    if (canWalk(player.tx + dx, player.ty + dy)) {
+      player.tx += dx; player.ty += dy;
+      player.mx = dx; player.my = dy;
+      player.step = 0;
+      player.moving = true;
+    }
+  }
+}
+
+function drawWorld() {
+  const camX = Math.max(0, Math.min(MAP_W * TILE - VW, player.px - VW / 2 + TILE / 2));
+  const camY = Math.max(0, Math.min(MAP_H * TILE - VH, player.py - VH / 2 + TILE / 2));
+  const tx0 = Math.floor(camX / TILE), ty0 = Math.floor(camY / TILE);
+  for (let ty = ty0; ty <= ty0 + Math.ceil(VH / TILE); ty++) {
+    for (let tx = tx0; tx <= tx0 + Math.ceil(VW / TILE); tx++) {
+      drawTile(tileAt(tx, ty), tx * TILE - camX, ty * TILE - camY, tx, ty);
+    }
+  }
+  // NPCs
+  for (const n of NPCS) {
+    const pal = n.rival ? (game.charKey ? CHARACTERS[rivalKey()].pal : personPal('#1a1a20', ROBE)) : n.pal;
+    const art = n.rival && game.charKey ? CHARACTERS[rivalKey()].front : n.art;
+    drawArt(art, pal, n.tx * TILE - camX + 3, n.ty * TILE - camY - 2 + (n.rival ? 0 : 0), 1);
+    // boss marker
+    if ((n.boss && !game.flags[n.boss]) || (n.rival && !game.flags.marburg)) {
+      if (Math.floor(game.frame / 40) % 2 === 0) {
+        ctx.fillStyle = '#f0d060';
+        ctx.font = '8px "Courier New", monospace';
+        ctx.fillText('!', n.tx * TILE - camX + 6, n.ty * TILE - camY - 4);
+      }
+    }
+  }
+  // Player
+  const chr = CHARACTERS[game.charKey];
+  const bob = player.moving && Math.floor(player.step / 4) % 2 ? -1 : 0;
+  const art = player.dir === 'up' ? chr.back : chr.front;
+  const flip = player.dir === 'left';
+  drawArt(art, chr.pal, player.px - camX + 3, player.py - camY - 2 + bob, 1, flip);
+
+  // HUD strip
+  ctx.fillStyle = 'rgba(20,20,40,0.85)';
+  ctx.fillRect(0, 0, VW, 11);
+  ctx.fillStyle = '#f8f8f0';
+  ctx.font = '8px "Courier New", monospace';
+  ctx.fillText(`${chr.name} L${player.level}  HP ${player.hp}/${player.maxHp}  DEBATES ${bossCount() + (game.flags.legate ? 1 : 0)}/4`, 4, 8);
+}
+
+// ------------------------------------------------------------------
+// Battle render
+// ------------------------------------------------------------------
+function drawHpBar(x, y, w, cur, max) {
+  ctx.fillStyle = '#404050';
+  ctx.fillRect(x, y, w, 5);
+  const frac = Math.max(0, cur / max);
+  ctx.fillStyle = frac > 0.5 ? '#40a840' : frac > 0.2 ? '#e0a020' : '#d03030';
+  ctx.fillRect(x + 1, y + 1, Math.round((w - 2) * frac), 3);
+}
+
+function updateBattle() {
+  // animate hp bars
+  if (battle.eShow > battle.eHp) battle.eShow = Math.max(battle.eHp, battle.eShow - 1.5);
+  if (battle.eShow < battle.eHp) battle.eShow = battle.eHp;
+  if (battle.pShow > player.hp) battle.pShow = Math.max(player.hp, battle.pShow - 1.5);
+  if (battle.pShow < player.hp) battle.pShow = Math.min(player.hp, battle.pShow + 2);
+  if (battle.shake > 0) battle.shake--;
+
+  if (battle.phase === 'msg') {
+    const cur = battle.queue[0];
+    if (!cur) { battle.phase = 'menu'; return; }
+    if (cur.auto) {
+      battle.queue.shift();
+      dialogChars = 0;
+      if (cur.fn) cur.fn();
+      return;
+    }
+    // wait for bars to settle + keypress
+    if (pressed.A && battle.eShow === battle.eHp && Math.round(battle.pShow) === player.hp) {
+      battle.queue.shift();
+      dialogChars = 0;
+      if (cur.fn) cur.fn();
+      audio.move();
+    }
+  } else if (battle.phase === 'menu') {
+    const chr = CHARACTERS[game.charKey];
+    if (pressed.up && battle.menuIndex >= 2) { battle.menuIndex -= 2; audio.move(); }
+    if (pressed.down && battle.menuIndex < 2) { battle.menuIndex += 2; audio.move(); }
+    if (pressed.left && battle.menuIndex % 2 === 1) { battle.menuIndex--; audio.move(); }
+    if (pressed.right && battle.menuIndex % 2 === 0) { battle.menuIndex++; audio.move(); }
+    if (pressed.A) { audio.select(); useMove(battle.menuIndex); }
+    if (pressed.B && !battle.isBoss && !battle.friendly) {
+      battle.phase = 'msg';
+      if (Math.random() < 0.7) {
+        addMsg('You politely excuse yourself from the debate...', () => endBattle(false));
+      } else {
+        addMsg('You try to leave — but the crowd blocks your way!', () => enemyTurn());
+      }
+    }
+  }
+}
+
+function drawBattle() {
+  const e = battle.enemy;
+  const chr = CHARACTERS[game.charKey];
+  const shakeX = battle.shake > 0 ? (battle.shake % 2 ? 2 : -2) : 0;
+
+  // background
+  ctx.fillStyle = '#e8e0c8';
+  ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = '#d0c8a8';
+  ctx.fillRect(0, 60, VW, 4);
+  // platforms
+  ctx.fillStyle = '#c8b888';
+  ctx.beginPath(); ctx.ellipse(180, 62, 40, 8, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(56, 112, 42, 9, 0, 0, 7); ctx.fill();
+
+  // enemy sprite (art is 12 wide x 12 tall, scale 3)
+  drawArt(e.art, e.pal, 162 + shakeX, 22, 3);
+  // player back sprite
+  drawArt(chr.back, chr.pal, 34 - shakeX, 68, 3);
+
+  // enemy info box
+  ctx.fillStyle = '#f8f8f0';
+  ctx.fillRect(6, 8, 108, 26);
+  ctx.strokeStyle = '#20203a'; ctx.lineWidth = 1;
+  ctx.strokeRect(6.5, 8.5, 107, 25);
+  ctx.fillStyle = '#20203a';
+  ctx.font = '8px "Courier New", monospace';
+  ctx.fillText(e.name.slice(0, 19), 10, 17);
+  ctx.fillText(`L${battle.eLevel}`, 10, 26);
+  drawHpBar(32, 21, 76, battle.eShow, battle.eMaxHp);
+
+  // player info box
+  ctx.fillStyle = '#f8f8f0';
+  ctx.fillRect(126, 82, 108, 32);
+  ctx.strokeRect(126.5, 82.5, 107, 31);
+  ctx.fillStyle = '#20203a';
+  ctx.fillText(`${chr.name}  L${player.level}`, 130, 91);
+  drawHpBar(130, 95, 98, battle.pShow, player.maxHp);
+  ctx.fillStyle = '#20203a';
+  ctx.fillText(`${Math.round(battle.pShow)}/${player.maxHp}`, 130, 110);
+  // xp bar
+  ctx.fillStyle = '#404050';
+  ctx.fillRect(186, 104, 44, 3);
+  ctx.fillStyle = '#4878e0';
+  ctx.fillRect(187, 105, Math.round(42 * Math.min(1, player.xp / xpNeed(player.level))), 1);
+
+  // message / menu area
+  if (battle.phase === 'menu') {
+    ctx.fillStyle = '#f8f8f0';
+    ctx.fillRect(0, VH - 42, VW, 42);
+    ctx.strokeStyle = '#20203a'; ctx.lineWidth = 2;
+    ctx.strokeRect(1, VH - 41, VW - 2, 40);
+    ctx.font = '8px "Courier New", monospace';
+    const moves = chr.moves;
+    for (let i = 0; i < 4; i++) {
+      const mx = 14 + (i % 2) * 116, my = VH - 28 + Math.floor(i / 2) * 13;
+      ctx.fillStyle = '#20203a';
+      let label = moves[i].name;
+      if (moves[i].heal) label += ` x${battle.healUses}`;
+      ctx.fillText(label, mx, my);
+      if (battle.menuIndex === i) ctx.fillText('>', mx - 8, my);
+    }
+    const sel = moves[battle.menuIndex];
+    ctx.fillStyle = '#606070';
+    ctx.fillText(sel.heal ? 'Restores conviction.' : `Power ${sel.pow} · ${sel.tag.toUpperCase()}`, 14, VH - 4);
+  } else {
+    const cur = battle.queue[0];
+    if (cur && !cur.auto) {
+      dialogChars += 2;
+      drawTextBox(cur.text, 0, VH - 42, VW, 42, Math.floor(dialogChars));
+      if (Math.floor(game.frame / 20) % 2 === 0) {
+        ctx.fillStyle = '#20203a';
+        ctx.fillText('v', VW - 12, VH - 6);
+      }
+    }
+  }
+}
+let dialogChars = 0;
+
+// ------------------------------------------------------------------
+// Title & character select
+// ------------------------------------------------------------------
+function drawTitle() {
+  ctx.fillStyle = '#101828';
+  ctx.fillRect(0, 0, VW, VH);
+  // decorative church door
+  ctx.fillStyle = '#6a4a2a';
+  ctx.fillRect(102, 44, 36, 46);
+  ctx.fillStyle = '#4a3018';
+  ctx.fillRect(105, 47, 30, 43);
+  ctx.fillStyle = '#f8f8f0';
+  ctx.fillRect(110, 52, 20, 26); // parchment
+  ctx.fillStyle = '#888';
+  for (let i = 0; i < 5; i++) ctx.fillRect(112, 56 + i * 4, 16, 1);
+  ctx.fillStyle = '#e8c030';
+  ctx.fillRect(118, 50, 4, 4); // nail
+
+  ctx.fillStyle = '#f0d060';
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('REFORMATION', VW / 2, 22);
+  ctx.fillText('QUEST', VW / 2, 38);
+  ctx.font = '8px "Courier New", monospace';
+  ctx.fillStyle = '#a8a8c0';
+  ctx.fillText('An 8-bit debate RPG · anno 1517', VW / 2, 102);
+  if (Math.floor(game.frame / 30) % 2 === 0) {
+    ctx.fillStyle = '#f8f8f0';
+    ctx.fillText('- PRESS A TO BEGIN -', VW / 2, 126);
+  }
+  ctx.fillStyle = '#606080';
+  ctx.fillText('D-pad move · A confirm · B back', VW / 2, 148);
+  ctx.textAlign = 'left';
+}
+
+const SELECT_KEYS = ['luther', 'calvin', 'zwingli'];
+function drawSelect() {
+  ctx.fillStyle = '#101828';
+  ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = '#f0d060';
+  ctx.font = 'bold 10px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('CHOOSE YOUR REFORMER', VW / 2, 16);
+  ctx.font = '8px "Courier New", monospace';
+  for (let i = 0; i < 3; i++) {
+    const key = SELECT_KEYS[i];
+    const c = CHARACTERS[key];
+    const x = 24 + i * 72;
+    const selected = game.selIndex === i;
+    ctx.fillStyle = selected ? '#28304c' : '#181f30';
+    ctx.fillRect(x, 26, 60, 74);
+    ctx.strokeStyle = selected ? '#f0d060' : '#3a3a5a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, 26.5, 59, 73);
+    drawArt(c.front, c.pal, x + 15, 32, 3);
+    ctx.fillStyle = selected ? '#f0d060' : '#a8a8c0';
+    ctx.fillText(c.name, x + 30, 94);
+  }
+  const c = CHARACTERS[SELECT_KEYS[game.selIndex]];
+  ctx.fillStyle = '#d8d8e0';
+  ctx.fillText(c.full, VW / 2, 114);
+  ctx.fillStyle = '#8888a0';
+  c.blurb.forEach((l, i) => ctx.fillText(l, VW / 2, 126 + i * 10));
+  ctx.textAlign = 'left';
+}
+
+function updateSelect() {
+  if (pressed.left && game.selIndex > 0) { game.selIndex--; audio.move(); }
+  if (pressed.right && game.selIndex < 2) { game.selIndex++; audio.move(); }
+  if (pressed.A) {
+    game.charKey = SELECT_KEYS[game.selIndex];
+    initPlayerStats();
+    audio.select();
+    game.state = 'world';
+    const c = CHARACTERS[game.charKey];
+    say([
+      `You are ${c.full}. The year is 1517. The church sells forgiveness for coin, and your conscience burns.`,
+      'Post your theses on the CASTLE CHURCH door to the northwest. Debate wandering defenders of the old ways in the tall grass.',
+      'Defeat the three great champions — TETZEL, ECK, and CAJETAN — then face the DIET OF WORMS to the southeast!',
+      'Rest at the INN (north) whenever your conviction runs low. Go forth!',
+    ]);
+  }
+}
+
+// ------------------------------------------------------------------
+// Lesson card
+// ------------------------------------------------------------------
+function drawLesson() {
+  drawWorld();
+  ctx.fillStyle = 'rgba(10,10,24,0.75)';
+  ctx.fillRect(0, 0, VW, VH);
+  const x = 16, y = 24, w = VW - 32, h = VH - 48;
+  ctx.fillStyle = '#f4ecd0';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#8a6a3a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+  ctx.fillStyle = '#6a3010';
+  ctx.font = 'bold 9px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('~ HISTORY LESSON ~', VW / 2, y + 15);
+  ctx.textAlign = 'left';
+  ctx.font = '8px "Courier New", monospace';
+  ctx.fillStyle = '#30281a';
+  const lines = wrapText(lesson.text, Math.floor((w - 20) / 5));
+  lines.forEach((l, i) => ctx.fillText(l, x + 10, y + 30 + i * 10));
+  if (Math.floor(game.frame / 30) % 2 === 0) {
+    ctx.fillStyle = '#8a6a3a';
+    ctx.textAlign = 'center';
+    ctx.fillText('A: continue', VW / 2, y + h - 6);
+    ctx.textAlign = 'left';
+  }
+}
+
+// ------------------------------------------------------------------
+// Ending screen
+// ------------------------------------------------------------------
+function drawEnding() {
+  ctx.fillStyle = '#101828';
+  ctx.fillRect(0, 0, VW, VH);
+  ctx.fillStyle = '#f0d060';
+  ctx.font = 'bold 10px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('* VICTORY AT WORMS *', VW / 2, 20);
+  ctx.font = '8px "Courier New", monospace';
+  ctx.fillStyle = '#d8d8e0';
+  const page = ENDING_PAGES[ending.page];
+  let yy = 48;
+  for (const line of page) {
+    const wrapped = wrapText(line, 42);
+    if (line === '') { yy += 8; continue; }
+    for (const wl of wrapped) { ctx.fillText(wl, VW / 2, yy); yy += 11; }
+  }
+  if (Math.floor(game.frame / 30) % 2 === 0) {
+    ctx.fillStyle = '#8888a0';
+    ctx.fillText(`A: ${ending.page < ENDING_PAGES.length - 1 ? 'next' : 'return to the world'} (${ending.page + 1}/${ENDING_PAGES.length})`, VW / 2, VH - 10);
+  }
+  ctx.textAlign = 'left';
+}
+
+// ------------------------------------------------------------------
+// Main loop
+// ------------------------------------------------------------------
+function update() {
+  switch (game.state) {
+    case 'title':
+      if (pressed.A) { audio.select(); game.state = 'select'; }
+      break;
+    case 'select':
+      updateSelect();
+      break;
+    case 'world':
+      updateWorld();
+      break;
+    case 'dialog': {
+      const text = dialog.pages[dialog.page] || '';
+      dialog.chars += 2;
+      if (pressed.A) {
+        if (dialog.chars < text.length) {
+          dialog.chars = text.length;
+        } else {
+          dialog.page++;
+          dialog.chars = 0;
+          audio.move();
+          if (dialog.page >= dialog.pages.length) {
+            game.state = 'world';
+            const done = dialog.done;
+            dialog.done = null;
+            if (done) done();
+          }
+        }
+      }
+      break;
+    }
+    case 'battle':
+      updateBattle();
+      break;
+    case 'lesson':
+      if (pressed.A) { audio.select(); game.state = 'world'; }
+      break;
+    case 'ending':
+      if (pressed.A) {
+        audio.select();
+        if (ending.page < ENDING_PAGES.length - 1) ending.page++;
+        else game.state = 'world';
+      }
+      break;
+  }
+}
+
+function render() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, VW, VH);
+  switch (game.state) {
+    case 'title': drawTitle(); break;
+    case 'select': drawSelect(); break;
+    case 'world': drawWorld(); break;
+    case 'dialog': {
+      if (dialog.prevState === 'battle' || battle.active) drawBattle(); else drawWorld();
+      const text = dialog.pages[Math.min(dialog.page, dialog.pages.length - 1)] || '';
+      drawTextBox(text, 0, VH - 42, VW, 42, Math.floor(dialog.chars));
+      if (dialog.chars >= text.length && Math.floor(game.frame / 20) % 2 === 0) {
+        ctx.fillStyle = '#20203a';
+        ctx.font = '8px "Courier New", monospace';
+        ctx.fillText('v', VW - 12, VH - 6);
+      }
+      break;
+    }
+    case 'battle': drawBattle(); break;
+    case 'lesson': drawLesson(); break;
+    case 'ending': drawEnding(); break;
+  }
+}
+
+function loop() {
+  game.frame++;
+  update();
+  render();
+  pressed = {};
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
