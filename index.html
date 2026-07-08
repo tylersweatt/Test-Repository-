@@ -193,37 +193,77 @@ const KEYMAP = {
   z: 'A', Z: 'A', Enter: 'A', ' ': 'A',
   x: 'B', X: 'B', Backspace: 'B', Escape: 'B',
 };
+// `held` is a merged view of two sources — keyboard state and active
+// touch pointers — recomputed on every change so no input can stick.
+const KEYS = ['up', 'down', 'left', 'right', 'A', 'B'];
+const kbDown = {};
+const ptrKeys = new Map(); // pointerId -> logical key
+function syncHeld() {
+  const t = {};
+  ptrKeys.forEach(k => { t[k] = true; });
+  for (const k of KEYS) held[k] = !!(kbDown[k] || t[k]);
+}
 window.addEventListener('keydown', e => {
   if (e.key === 'm' || e.key === 'M') { audio.unlock(); audio.toggleMute(); return; }
   const k = KEYMAP[e.key];
   if (!k) return;
   e.preventDefault();
   if (!held[k]) pressed[k] = true;
-  held[k] = true;
+  kbDown[k] = true;
+  syncHeld();
   audio.unlock();
 });
 window.addEventListener('keyup', e => {
   const k = KEYMAP[e.key];
-  if (k) held[k] = false;
+  if (k) { kbDown[k] = false; syncHeld(); }
 });
+// Failsafes: releases can be missed when the page loses focus or the
+// browser interrupts a gesture — clear everything rather than stick.
+function clearAllInput() {
+  ptrKeys.clear();
+  for (const k of KEYS) kbDown[k] = false;
+  syncHeld();
+}
+window.addEventListener('blur', clearAllInput);
+window.addEventListener('pagehide', clearAllInput);
+document.addEventListener('visibilitychange', () => { if (document.hidden) clearAllInput(); });
 
-// On-screen Game Boy buttons (touch, pen, and mouse via pointer events)
+// On-screen Game Boy buttons (touch, pen, and mouse via pointer events).
+// Pointers are tracked globally by id rather than captured per button, so
+// releases anywhere on the page are never missed, and a thumb rolling
+// across the D-pad retargets to the arrow it is over.
 document.querySelectorAll('button[data-k]').forEach(el => {
-  const k = el.dataset.k;
   el.tabIndex = -1; // keep focus on the canvas for keyboard players
+  el.addEventListener('contextmenu', e => e.preventDefault());
   el.addEventListener('pointerdown', e => {
     e.preventDefault();
-    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    const k = el.dataset.k;
     if (!held[k]) pressed[k] = true;
-    held[k] = true;
+    ptrKeys.set(e.pointerId, k);
+    syncHeld();
     audio.unlock();
   });
-  const release = () => { held[k] = false; };
-  el.addEventListener('pointerup', release);
-  el.addEventListener('pointercancel', release);
-  el.addEventListener('lostpointercapture', release);
-  el.addEventListener('contextmenu', e => e.preventDefault());
 });
+const DPAD_KEYS = { up: 1, down: 1, left: 1, right: 1 };
+window.addEventListener('pointermove', e => {
+  const cur = ptrKeys.get(e.pointerId);
+  if (cur === undefined || !DPAD_KEYS[cur]) return; // only D-pad rolls retarget
+  const hit = document.elementFromPoint(e.clientX, e.clientY);
+  const btn = hit && hit.closest ? hit.closest('button[data-k]') : null;
+  if (btn && DPAD_KEYS[btn.dataset.k]) {
+    if (btn.dataset.k !== cur) {
+      ptrKeys.set(e.pointerId, btn.dataset.k);
+      if (!held[btn.dataset.k]) pressed[btn.dataset.k] = true;
+      syncHeld();
+    }
+  } else if (!(hit && hit.closest && hit.closest('.dpad'))) {
+    ptrKeys.delete(e.pointerId); // dragged clean off the pad: release
+    syncHeld();
+  }
+});
+const endPointer = e => { if (ptrKeys.delete(e.pointerId)) syncHeld(); };
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
 
 // Tap the speaker grille or power LED to toggle sound on mobile
 ['.speaker', '.power'].forEach(sel => {
