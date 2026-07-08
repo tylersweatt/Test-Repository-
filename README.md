@@ -3,6 +3,22 @@
 An 8-bit, Pokémon-style RPG that teaches the history of the Protestant Reformation.
 Everything lives in a single dependency-free file: [`index.html`](index.html) — just open it in a browser.
 
+**▶ Play online:** https://tylersweatt.github.io/Test-Repository-/ *(goes live once the repo is
+public and the Pages workflow has run on `main` — see below)*
+
+On phones and tablets the game appears inside a Game Boy–style console with a touch D-pad and
+A/B buttons; on desktop you get a plain screen and play with the keyboard.
+
+## Publishing (GitHub Pages, free)
+
+The repo ships with `.github/workflows/pages.yml`, which deploys the site automatically:
+
+1. Make the repository **public** (Settings → General → Danger Zone → Change visibility) —
+   GitHub Pages is free for public repos.
+2. Merge to `main`. The workflow builds and publishes on every push to `main`
+   (or trigger it manually from the Actions tab via *Run workflow*).
+3. Share the link: `https://tylersweatt.github.io/Test-Repository-/`
+
 ## How to play
 
 1. Open `index.html` in any modern browser (or serve it with `python3 -m http.server`).
