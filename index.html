@@ -194,6 +194,7 @@ const KEYMAP = {
   x: 'B', X: 'B', Backspace: 'B', Escape: 'B',
 };
 window.addEventListener('keydown', e => {
+  if (e.key === 'm' || e.key === 'M') { audio.unlock(); audio.toggleMute(); return; }
   const k = KEYMAP[e.key];
   if (!k) return;
   e.preventDefault();
@@ -224,6 +225,16 @@ document.querySelectorAll('button[data-k]').forEach(el => {
   el.addEventListener('contextmenu', e => e.preventDefault());
 });
 
+// Tap the speaker grille or power LED to toggle sound on mobile
+['.speaker', '.power'].forEach(sel => {
+  const el = document.querySelector(sel);
+  if (el) el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    audio.unlock();
+    audio.toggleMute();
+  });
+});
+
 // Scale the console shell to exactly fill the visible screen on phones
 // (e.g. iPhone Pro Max), accounting for browser chrome via visualViewport.
 const shellEl = document.querySelector('.gb');
@@ -243,19 +254,37 @@ if (touchLayout.addEventListener) touchLayout.addEventListener('change', fitShel
 fitShell();
 
 // ------------------------------------------------------------------
-// Tiny chiptune-ish sound effects (square wave beeps)
+// 8-bit audio: square-wave SFX + a tiny music sequencer
 // ------------------------------------------------------------------
+const TRACKS = {
+  title: { beat: 0.42, notes: [
+    [262,1],[330,1],[392,1],[523,2],[0,2],[494,1],[392,1],[330,1],[262,2],[0,3]] },
+  // Overworld loop after Luther's own hymn, 'Ein feste Burg ist unser Gott'
+  world: { beat: 0.34, bass: true, notes: [
+    [523,1],[523,1],[523,1],[392,1],[440,1],[440,1],[392,2],[0,1],
+    [349,1],[349,1],[330,1],[294,1],[262,2],[0,1],
+    [392,1],[440,1],[494,1],[523,1],[494,1],[440,1],[392,2],[0,1],
+    [349,1],[392,1],[330,1],[294,1],[262,3],[0,2]] },
+  battle: { beat: 0.14, notes: [
+    [220,1],[262,1],[330,1],[440,1],[392,1],[330,1],[262,1],[220,1],
+    [196,1],[247,1],[294,1],[392,1],[349,1],[294,1],[247,1],[196,1]] },
+};
 const audio = {
   ctx: null,
+  muted: (() => { try { return localStorage.getItem('rq-muted') === '1'; } catch (e) { return false; } })(),
   unlock() {
     if (!this.ctx) {
       try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
     }
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
   },
-  beep(freq, dur, vol = 0.04, type = 'square', when = 0) {
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime + when;
+  toggleMute() {
+    this.muted = !this.muted;
+    try { localStorage.setItem('rq-muted', this.muted ? '1' : '0'); } catch (e) {}
+  },
+  note(freq, dur, at, vol = 0.04, type = 'square') {
+    if (!this.ctx || this.muted) return;
+    const t = Math.max(at, this.ctx.currentTime);
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.type = type; o.frequency.value = freq;
     g.gain.setValueAtTime(vol, t);
@@ -263,15 +292,53 @@ const audio = {
     o.connect(g); g.connect(this.ctx.destination);
     o.start(t); o.stop(t + dur);
   },
+  beep(freq, dur, vol = 0.04, type = 'square', when = 0) {
+    if (!this.ctx) return;
+    this.note(freq, dur, this.ctx.currentTime + when, vol, type);
+  },
   move()   { this.beep(440, 0.05); },
   select() { this.beep(660, 0.07); this.beep(880, 0.07, 0.04, 'square', 0.07); },
   back()   { this.beep(300, 0.07); },
   hit()    { this.beep(180, 0.12, 0.05, 'sawtooth'); },
+  crit()   { this.beep(1100, 0.05, 0.05); this.beep(1400, 0.06, 0.05, 'square', 0.05); this.beep(1760, 0.09, 0.05, 'square', 0.1); },
   heal()   { this.beep(520, 0.08); this.beep(660, 0.08, 0.04, 'square', 0.08); this.beep(780, 0.1, 0.04, 'square', 0.16); },
   faint()  { this.beep(300, 0.15, 0.05); this.beep(220, 0.15, 0.05, 'square', 0.15); this.beep(150, 0.25, 0.05, 'square', 0.3); },
   win()    { [523, 659, 784, 1047].forEach((f, i) => this.beep(f, 0.12, 0.045, 'square', i * 0.11)); },
   level()  { [660, 880, 1100].forEach((f, i) => this.beep(f, 0.09, 0.045, 'square', i * 0.08)); },
   encounter() { this.beep(200, 0.1, 0.05); this.beep(260, 0.1, 0.05, 'square', 0.1); },
+  blip()   { this.beep(880, 0.02, 0.015); },
+  bump()   { this.beep(90, 0.06, 0.05, 'sawtooth'); },
+  rustle() { this.beep(160, 0.04, 0.02, 'triangle'); this.beep(140, 0.04, 0.02, 'triangle', 0.04); },
+  thunk()  {
+    for (let i = 0; i < 3; i++) {
+      this.beep(75, 0.09, 0.09, 'sawtooth', i * 0.3);
+      this.beep(50, 0.12, 0.07, 'sawtooth', i * 0.3 + 0.02);
+    }
+  },
+  // --- background music sequencer (lookahead scheduling) ---
+  trackName: null, seqIdx: 0, nextNote: 0,
+  setTrack(name) {
+    if (this.trackName === name) return;
+    this.trackName = name;
+    this.seqIdx = 0;
+    this.nextNote = this.ctx ? this.ctx.currentTime + 0.1 : 0;
+  },
+  tickMusic() {
+    if (!this.ctx || this.muted || !this.trackName) return;
+    const tr = TRACKS[this.trackName];
+    if (!tr) return;
+    if (this.nextNote < this.ctx.currentTime - 0.5) this.nextNote = this.ctx.currentTime + 0.05;
+    while (this.nextNote < this.ctx.currentTime + 0.25) {
+      const [f, b] = tr.notes[this.seqIdx];
+      const dur = b * tr.beat;
+      if (f) {
+        this.note(f, dur * 0.85, this.nextNote, 0.016);
+        if (tr.bass) this.note(f / 2, dur * 0.85, this.nextNote, 0.011, 'triangle');
+      }
+      this.nextNote += dur;
+      this.seqIdx = (this.seqIdx + 1) % tr.notes.length;
+    }
+  },
 };
 
 // ------------------------------------------------------------------
@@ -298,106 +365,114 @@ function drawArt(art, pal, x, y, s = 1, flip = false) {
 const SKIN = '#f0c8a0', EYE = '#1a1a20', ROBE = '#34343e', COLLAR = '#e8e8e8',
       SHOE = '#402818';
 
+// Luther after the Cranach portraits: wide black beret, dark hair at the
+// sides, round clean-shaven face, black gown over a white shirt, book in hand.
 const LUTHER_F = [
-  '.kkkkkkkk.',
-  'kkkkkkkkkk',
-  '.kkkkkkkk.',
-  '.ffffffff.',
-  '.feffffef.',
-  '.ffffffff.',
-  '..ffffff..',
-  '.rrccccrr.',
-  'rrrrrrrrrr',
-  'rrrbbbbrrr',
-  'rrrbbbbrrr',
-  '.rrrrrrrr.',
-  '.rr....rr.',
-  '.ss....ss.',
+  '.kkkkkkkkkk.',
+  'kkkkkkkkkkkk',
+  '.kkkkkkkkkk.',
+  '.affffffffa.',
+  '.afeffffefa.',
+  '.affffffffa.',
+  '.aaffffffaa.',
+  '...ffffff...',
+  '.rrrccccrrr.',
+  'rrrrrrrrrrrr',
+  'rrrbbbbbbrrr',
+  'rrrbbbbbbrrr',
+  '.rrrrrrrrrr.',
+  '.rrr....rrr.',
+  '.ss......ss.',
 ];
 const LUTHER_B = [
-  '.kkkkkkkk.',
-  'kkkkkkkkkk',
-  '.kkkkkkkk.',
-  '.kkkkkkkk.',
-  '.kkkkkkkk.',
-  '..kkkkkk..',
-  '.rrrrrrrr.',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  '.rrrrrrrr.',
-  '.rr....rr.',
-  '.ss....ss.',
+  '.kkkkkkkkkk.',
+  'kkkkkkkkkkkk',
+  '.kkkkkkkkkk.',
+  '.aaaaaaaaaa.',
+  '.aaaaaaaaaa.',
+  '..aaaaaaaa..',
+  '.rrrrrrrrrr.',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  '.rrrrrrrrrr.',
+  '.rrr....rrr.',
+  '.ss......ss.',
 ];
+// Calvin: tall narrow cap, gaunt face, and his famous long pointed beard,
+// carrying the dark-red Institutes.
 const CALVIN_F = [
-  '..kkkkkk..',
-  '.kkkkkkkk.',
-  '.kkkkkkkk.',
-  '.ffffffff.',
-  '.feffffef.',
-  '.dffffffd.',
-  '.dddddddd.',
-  '.rrccccrr.',
-  'rrrrrrrrrr',
-  'rrrggggrrr',
-  'rrrggggrrr',
-  '.rrrrrrrr.',
-  '.rr....rr.',
-  '.ss....ss.',
+  '..kkkkkkkk..',
+  '..kkkkkkkk..',
+  '.kkkkkkkkkk.',
+  '...ffffff...',
+  '...feffef...',
+  '...ffffff...',
+  '..dddddddd..',
+  '.rrddddddrr.',
+  'rrrrddddrrrr',
+  'rrrrrddrrrrr',
+  'rrrggggggrrr',
+  'rrrggggggrrr',
+  '.rrrrrrrrrr.',
+  '.rrr....rrr.',
+  '.ss......ss.',
 ];
 const CALVIN_B = [
-  '..kkkkkk..',
-  '.kkkkkkkk.',
-  '.kkkkkkkk.',
-  '.kkkkkkkk.',
-  '.kkkkkkkk.',
-  '..kkkkkk..',
-  '.rrrrrrrr.',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  '.rrrrrrrr.',
-  '.rr....rr.',
-  '.ss....ss.',
+  '..kkkkkkkk..',
+  '..kkkkkkkk..',
+  '.kkkkkkkkkk.',
+  '..aaaaaaaa..',
+  '..aaaaaaaa..',
+  '...aaaaaa...',
+  '.rrrrrrrrrr.',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  '.rrrrrrrrrr.',
+  '.rrr....rrr.',
+  '.ss......ss.',
 ];
+// Zwingli after the Asper portrait: snug round black cap, clean-shaven,
+// preaching from an open Bible.
 const ZWINGLI_F = [
-  'hhhhhhhhhh',
-  '.hhhhhhhh.',
-  '.ffffffff.',
-  '.feffffef.',
-  '.ffffffff.',
-  '.ffddddff.',
-  '..ffffff..',
-  '.rrccccrr.',
-  'rrrrrrrrrr',
-  'rrrwwwwrrr',
-  'rrrwwwwrrr',
-  '.rrrrrrrr.',
-  '.rr....rr.',
-  '.ss....ss.',
+  '...kkkkkk...',
+  '..kkkkkkkk..',
+  '.kkkkkkkkkk.',
+  '..affffffa..',
+  '..afeffefa..',
+  '..affffffa..',
+  '...ffffff...',
+  '.rrrccccrrr.',
+  'rrrrrrrrrrrr',
+  'rrwwwwwwwwrr',
+  'rrwwwwwwwwrr',
+  '.rrrrrrrrrr.',
+  '.rrr....rrr.',
+  '.ss......ss.',
 ];
 const ZWINGLI_B = [
-  'hhhhhhhhhh',
-  '.hhhhhhhh.',
-  '.hhhhhhhh.',
-  '.kkkkkkkk.',
-  '.kkkkkkkk.',
-  '..kkkkkk..',
-  '.rrrrrrrr.',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  'rrrrrrrrrr',
-  '.rrrrrrrr.',
-  '.rr....rr.',
-  '.ss....ss.',
+  '...kkkkkk...',
+  '..kkkkkkkk..',
+  '.kkkkkkkkkk.',
+  '..aaaaaaaa..',
+  '..aaaaaaaa..',
+  '...aaaaaa...',
+  '.rrrrrrrrrr.',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  'rrrrrrrrrrrr',
+  '.rrrrrrrrrr.',
+  '.rrr....rrr.',
+  '.ss......ss.',
 ];
 
-const PAL_LUTHER  = { k: '#1a1a20', f: SKIN, e: EYE, r: ROBE, c: COLLAR, b: '#8a5a2b', s: SHOE };
-const PAL_CALVIN  = { k: '#1a1a20', f: SKIN, e: EYE, d: '#5a3a1a', r: '#2a2a34', c: COLLAR, g: '#7a2020', s: SHOE };
-const PAL_ZWINGLI = { h: '#1a1a2e', k: '#3a2a1a', f: SKIN, e: EYE, d: '#6a4a2a', r: '#303a30', c: COLLAR, w: '#e8e8d8', s: SHOE };
+const PAL_LUTHER  = { k: '#16161c', a: '#4a3320', f: SKIN, e: EYE, r: ROBE, c: COLLAR, b: '#8a5a2b', s: SHOE };
+const PAL_CALVIN  = { k: '#16161c', a: '#241a10', f: '#e8c098', e: EYE, d: '#3a2a18', r: '#26262e', g: '#7a2020', s: SHOE };
+const PAL_ZWINGLI = { k: '#14141c', a: '#3a2a1a', f: SKIN, e: EYE, r: '#2e3830', c: COLLAR, w: '#f0ede0', s: SHOE };
 
 // Generic townsfolk / cleric overworld sprite (palette-swapped)
 const PERSON = [
@@ -965,7 +1040,7 @@ function useMove(mi) {
       addMsg('', () => {  // silent damage application beat
         battle.eHp = Math.max(0, battle.eHp - dmg);
         battle.shake = 8;
-        audio.hit();
+        if (eff > 1) audio.crit(); else audio.hit();
       });
       battle.queue[battle.queue.length - 1].auto = true;
       if (eff > 1) addMsg(`It's super effective! ${e.effMsg || ''}`);
@@ -1325,6 +1400,7 @@ function updateWorld() {
       player.moving = false;
       player.px = player.tx * TILE;
       player.py = player.ty * TILE;
+      if (tileAt(player.tx, player.ty) === 'g') audio.rustle();
       maybeEncounter();
     }
     return;
@@ -1342,6 +1418,9 @@ function updateWorld() {
       player.mx = dx; player.my = dy;
       player.step = 0;
       player.moving = true;
+    } else if (game.frame - (player.lastBump || 0) > 25) {
+      player.lastBump = game.frame;
+      audio.bump();
     }
   }
 }
@@ -1374,14 +1453,14 @@ function drawWorld() {
   const bob = player.moving && Math.floor(player.step / 4) % 2 ? -1 : 0;
   const art = player.dir === 'up' ? chr.back : chr.front;
   const flip = player.dir === 'left';
-  drawArt(art, chr.pal, player.px - camX + 3, player.py - camY - 2 + bob, 1, flip);
+  drawArt(art, chr.pal, player.px - camX + 2, player.py - camY - 2 + bob, 1, flip);
 
   // HUD strip
   ctx.fillStyle = 'rgba(20,20,40,0.85)';
   ctx.fillRect(0, 0, VW, 11);
   ctx.fillStyle = '#f8f8f0';
   ctx.font = '8px "Courier New", monospace';
-  ctx.fillText(`${chr.name} L${player.level}  HP ${player.hp}/${player.maxHp}  DEBATES ${bossCount() + (game.flags.legate ? 1 : 0)}/4`, 4, 8);
+  ctx.fillText(`${chr.name} L${player.level}  HP ${player.hp}/${player.maxHp}  DEBATES ${bossCount() + (game.flags.legate ? 1 : 0)}/4${audio.muted ? '  MUTE' : ''}`, 4, 8);
 }
 
 // ------------------------------------------------------------------
@@ -1406,6 +1485,7 @@ function updateBattle() {
   if (battle.phase === 'msg') {
     const cur = battle.queue[0];
     if (!cur) { battle.phase = 'menu'; return; }
+    if (!cur.auto && dialogChars < cur.text.length && game.frame % 7 === 0) audio.blip();
     if (cur.auto) {
       battle.queue.shift();
       dialogChars = 0;
@@ -1455,7 +1535,7 @@ function drawBattle() {
   // enemy sprite (art is 12 wide x 12 tall, scale 3)
   drawArt(e.art, e.pal, 162 + shakeX, 22, 3);
   // player back sprite
-  drawArt(chr.back, chr.pal, 34 - shakeX, 68, 3);
+  drawArt(chr.back, chr.pal, 32 - shakeX, 68, 3);
 
   // enemy info box
   ctx.fillStyle = '#f8f8f0';
@@ -1547,7 +1627,8 @@ function drawTitle() {
     ctx.fillText('- PRESS A TO BEGIN -', VW / 2, 126);
   }
   ctx.fillStyle = '#606080';
-  ctx.fillText('D-pad move · A confirm · B back', VW / 2, 148);
+  ctx.fillText('D-pad move · A confirm · B back', VW / 2, 140);
+  ctx.fillText('sound: M key, or tap the speaker', VW / 2, 152);
   ctx.textAlign = 'left';
 }
 
@@ -1570,7 +1651,7 @@ function drawSelect() {
     ctx.strokeStyle = selected ? '#f0d060' : '#3a3a5a';
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, 26.5, 59, 73);
-    drawArt(c.front, c.pal, x + 15, 32, 3);
+    drawArt(c.front, c.pal, x + 12, 32, 3);
     ctx.fillStyle = selected ? '#f0d060' : '#a8a8c0';
     ctx.fillText(c.name, x + 30, 94);
   }
@@ -1673,6 +1754,7 @@ function update() {
     case 'dialog': {
       const text = dialog.pages[dialog.page] || '';
       dialog.chars += 2;
+      if (dialog.chars < text.length && game.frame % 7 === 0) audio.blip();
       if (pressed.A) {
         if (dialog.chars < text.length) {
           dialog.chars = text.length;
@@ -1680,6 +1762,8 @@ function update() {
           dialog.page++;
           dialog.chars = 0;
           audio.move();
+          const np = dialog.pages[dialog.page];
+          if (np && np.includes('THUNK')) audio.thunk();
           if (dialog.page >= dialog.pages.length) {
             game.state = 'world';
             const done = dialog.done;
@@ -1734,6 +1818,10 @@ function loop() {
   game.frame++;
   update();
   render();
+  const track = (battle.active || game.state === 'battle') ? 'battle'
+    : (game.state === 'title' || game.state === 'select') ? 'title' : 'world';
+  audio.setTrack(track);
+  audio.tickMusic();
   pressed = {};
   requestAnimationFrame(loop);
 }
