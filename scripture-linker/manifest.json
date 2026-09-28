@@ -1,0 +1,9 @@
+{
+	"id": "scripture-linker",
+	"name": "Scripture Linker",
+	"version": "1.0.0",
+	"minAppVersion": "1.5.0",
+	"description": "Finds Bible references in your notes, shows the ESV text on hover, and indexes every note by book and chapter.",
+	"author": "Tyler Sweatt",
+	"isDesktopOnly": false
+}

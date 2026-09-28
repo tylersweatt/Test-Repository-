@@ -1,0 +1,20 @@
+{
+	"name": "scripture-linker",
+	"version": "1.0.0",
+	"description": "Obsidian plugin: link, preview, and index Scripture references",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs --watch",
+		"build": "tsc && node esbuild.config.mjs",
+		"test": "esbuild test/*.test.ts --bundle --platform=node --outdir=.test --out-extension:.js=.cjs --alias:obsidian=./test/stubs/obsidian.ts --log-level=warning && node --test .test/*.test.cjs"
+	},
+	"license": "MIT",
+	"devDependencies": {
+		"@codemirror/language": "^6.11.0",
+		"@types/node": "^20.19.43",
+		"esbuild": "^0.25.12",
+		"obsidian": "^1.13.1",
+		"typescript": "^5.9.3"
+	},
+	"private": true
+}
