@@ -8,6 +8,9 @@ Everything lives in a single dependency-free file: [`index.html`](index.html) â€
 On phones and tablets the game appears inside a Game Boyâ€“style console with a touch D-pad and
 A/B buttons; on desktop you get a plain screen and play with the keyboard.
 
+> Also in this repo: [**Scripture Linker**](scripture-linker/), an Obsidian plugin that links Bible
+> references in your notes, shows the ESV text on hover, and indexes every note by book and chapter.
+
 ## Publishing (GitHub Pages, free)
 
 The repo ships with `.github/workflows/pages.yml`, which republishes the site on every push

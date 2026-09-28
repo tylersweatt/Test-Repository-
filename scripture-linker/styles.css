@@ -1,0 +1,187 @@
+/* References in notes */
+.scripture-ref {
+	color: var(--text-accent);
+	text-decoration: underline dotted;
+	text-decoration-color: var(--text-accent);
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+.scripture-ref:hover {
+	text-decoration-style: solid;
+}
+
+/* Verse card */
+.scripture-popover {
+	position: fixed;
+	z-index: var(--layer-popover);
+	width: min(420px, calc(100vw - 16px));
+	max-height: 360px;
+	display: flex;
+	flex-direction: column;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	box-shadow: var(--shadow-s);
+	font-size: var(--font-ui-small);
+}
+.scripture-popover-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 10px 12px 6px;
+}
+.scripture-popover-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+.scripture-popover-version {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	letter-spacing: 0.05em;
+}
+.scripture-popover-body {
+	padding: 0 12px 10px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	line-height: 1.55;
+	font-family: var(--font-text);
+	font-size: var(--font-text-size);
+	color: var(--text-normal);
+}
+.scripture-popover-body.is-muted,
+.scripture-popover-body.is-loading {
+	color: var(--text-muted);
+	font-family: var(--font-interface);
+	font-size: var(--font-ui-small);
+}
+.scripture-popover-body.is-error {
+	color: var(--text-error);
+	font-family: var(--font-interface);
+	font-size: var(--font-ui-small);
+}
+.scripture-popover-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 12px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+.scripture-popover-footer button {
+	font-size: var(--font-ui-smaller);
+}
+.scripture-popover-link {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+/* Side panel */
+.scripture-index {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+.scripture-index-bar {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+.scripture-index-bar input {
+	flex: 1;
+	min-width: 0;
+}
+.scripture-index-heading {
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin-bottom: 6px;
+}
+.scripture-index-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+.scripture-index-chip {
+	font-size: var(--font-ui-smaller);
+	padding: 2px 8px;
+	height: auto;
+	border-radius: var(--radius-s);
+}
+.scripture-index-library details > summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 3px 6px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+	list-style: none;
+}
+.scripture-index-library details > summary::-webkit-details-marker {
+	display: none;
+}
+.scripture-index-library details > summary::before {
+	content: "›";
+	display: inline-block;
+	width: 1em;
+	color: var(--text-faint);
+	transition: transform 100ms ease;
+}
+.scripture-index-library details[open] > summary::before {
+	transform: rotate(90deg);
+}
+.scripture-index-library details > summary > span:first-of-type {
+	flex: 1;
+}
+.scripture-index-library details > summary:hover {
+	background: var(--background-modifier-hover);
+}
+.scripture-index-book > summary {
+	font-weight: var(--font-semibold);
+}
+.scripture-index-children {
+	padding-left: 14px;
+}
+.scripture-index-chapter.is-highlighted > summary {
+	background: var(--background-modifier-active-hover);
+}
+.scripture-index-count {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-weight: normal;
+}
+.scripture-index-note {
+	padding: 4px 6px 6px;
+}
+.scripture-index-note-title {
+	font-weight: var(--font-medium);
+	color: var(--text-normal);
+	cursor: pointer;
+}
+.scripture-index-note-title:hover {
+	color: var(--text-accent);
+}
+.scripture-index-hit {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	padding: 2px 0 2px 8px;
+	border-left: 2px solid var(--background-modifier-border);
+	margin-top: 3px;
+	cursor: pointer;
+}
+.scripture-index-hit:hover {
+	border-left-color: var(--text-accent);
+	color: var(--text-normal);
+}
+.scripture-index-hit-ref {
+	font-weight: var(--font-semibold);
+	margin-right: 6px;
+}
+.scripture-index-empty,
+.scripture-index-footnote {
+	color: var(--text-faint);
+	font-size: var(--font-ui-small);
+	padding: 8px 6px;
+}
